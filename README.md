@@ -78,7 +78,7 @@ flowchart TD
 
     D --> E["Attach Custom Validators<br>(Transformation Logic)"]
 
-    E --> F["Instantiate Rules Mode<br>nwith Input JSON"]
+    E --> F["Instantiate Rules Mode<br>with Input JSON"]
 
     F --> G["Pydantic Validation Lifecycle"]
 
