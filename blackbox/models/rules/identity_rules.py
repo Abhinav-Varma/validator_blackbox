@@ -1,5 +1,6 @@
 from pydantic import BaseModel, model_validator
 from blackbox.models.base_input import RawInput
+from blackbox.utils.reformatter import format_date
 
 
 class IdentityRules(BaseModel):
@@ -17,6 +18,6 @@ class IdentityRules(BaseModel):
         self.full_name = f"{passport['first_name']} {passport['surname']}"
         self.passport_number = passport["passport_number"]
         self.nationality = passport["nationality"]
-        self.date_of_birth = passport["date_of_birth"]["$date"]
+        self.date_of_birth = format_date(passport["date_of_birth"]["$date"])
 
         return self
