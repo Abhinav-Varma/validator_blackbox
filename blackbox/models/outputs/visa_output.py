@@ -1,5 +1,5 @@
-from pydantic import BaseModel
-
+from pydantic import BaseModel, validator
+from datetime import datetime
 
 class VisaOutput(BaseModel):
     visa_type: str

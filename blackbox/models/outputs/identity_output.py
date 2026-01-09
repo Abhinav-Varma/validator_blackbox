@@ -1,9 +1,9 @@
-from pydantic import BaseModel
-
+from pydantic import BaseModel, constr, validator
+from datetime import datetime
 
 class IdentityOutput(BaseModel):
     full_name: constr(min_length=1, max_length=256)
-    passport_number: constr(regex=r'^[A-Z][0-9]{7}$')
+    passport_number: constr(pattern=r'^[A-Z][0-9]{7}$')
     nationality: str
     date_of_birth: str
 
