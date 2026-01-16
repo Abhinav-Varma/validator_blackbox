@@ -1,142 +1,160 @@
 # 🧩 Transformation Blackbox  
-### Marshmallow‑Driven Mapping with Pydantic Output Contracts
+## Canonical Field Resolver + Marshmallow + Pydantic
 
 ---
 
 ## 📌 Overview
 
-This project implements a **schema‑driven transformation blackbox** that converts **arbitrary input JSON** into **strict, validated Pydantic output models**.
+This document explains a **deterministic, scalable data‑transformation architecture** that converts **arbitrary input JSON** into **strict, validated Pydantic output models**, without hard‑coding input field names.
 
-The design intentionally separates **input flexibility** from **output correctness** by using:
+The core problem addressed is **input variability**:
+- Different field names (`first_name`, `fname`, `f1`)
+- Different structures (flat vs nested)
+- Different formats (ISO dates, Mongo `$date`, strings)
 
-- **Marshmallow** → input normalization and mapping  
-- **Pydantic** → final output contracts and validation  
-  
-
-All transformations are **explicit, deterministic, and explainable**.
+The solution introduces a **Canonical Field Resolver** upstream of Marshmallow and Pydantic.
 
 ---
 
 ## 🎯 Core Design Principle
 
-> **Flexible input, strict output**
+> **Resolve semantics first, then transform, then validate**
 
-- Input JSON may vary in structure, nesting, and field names
-- Output must always conform to a well‑defined schema
-- Mapping logic must not leak into output validation
-- Validation logic must not depend on input shape
-
----
-
-
-## 🏗️ Architectural Layers
-
-The system is composed of **three clearly separated layers**:
-
-1. **Mapping Layer (Marshmallow)**  
-   Handles input variability and produces a canonical shape
-
-2. **Orchestration Layer**  
-   Coordinates transformation and validation steps
-
-3. **Contract Layer (Pydantic)**  
-   Enforces strict, consumer‑ready output schemas
+Each stage answers exactly one question:
+- **What does this field represent?**
+- **How should it be reshaped?**
+- **Is it valid?**
 
 ---
 
-## 🔄 STEP BY STEP EXECUTION
+## 🏗️ High‑Level Architecture
+
+
+---
+
+## 🔄 Mermaid Diagram — Flow of Events
 
 ```mermaid
 flowchart TD
-    A[Raw Input JSON] --> B[Marshmallow Schema]
-    B --> C[Canonical Dictionary]
-    C --> D[Orchestrator]
-    D --> E[Pydantic Output Model]
-    E --> F[Validated Output]
+    A[Raw Input JSON] --> B[Canonical Field Resolver]
+    B -->|semantic resolution| C[Canonical JSON]
+    C --> D[Marshmallow Mapping & Transformation]
+    D --> E[Intermediate Transformed Dict]
+    E --> F[Pydantic Output Model]
+    F --> G[Validated Consumer Output]
+```
 
+## ✅ Canonical Field Resolver (Key Idea)
+
+The **Canonical Field Resolver** is a dedicated layer that:
+
+- Scans all keys in the input JSON
+- Applies heuristics, fuzzy matching, or optional AI
+- Determines which input key corresponds to which **canonical field**
+- Rewrites the input JSON using **stable canonical names**
+
+## 🧾 Example — Raw Input JSON (Untrusted)
+
+```json
+{
+  "f1": "PAULSTALIN",
+  "lname": "GODFREY",
+  "pass_no": "B9517607",
+  "dob": "2000-01-22T00:00:00.000Z",
+  "nat": "Indian"
+}
+```
+
+### Problems
+- Inconsistent naming
+- No schema guarantees
+- Not directly usable
+
+## 🔍 Step 1 — Semantic Resolution
+
+The resolver determines intent by mapping incoming keys to canonical fields:
+
+| Canonical Field     | Input Key |
+|---------------------|-----------|
+| `first_name`        | `f1`      |
+| `last_name`         | `lname`   |
+| `passport_number`   | `pass_no` |
+| `date_of_birth`     | `dob`     |
+| `nationality`       | `nat`     |
+
+---
+
+## 🧾 Canonical JSON (Post-Resolution)
+
+```json
+{
+  "first_name": "PAULSTALIN",
+  "last_name": "GODFREY",
+  "passport_number": "B9517607",
+  "date_of_birth": "2000-01-22T00:00:00.000Z",
+  "nationality": "Indian"
+}
+```
+
+### Key Properties
+- Stable field names
+- Semantic ambiguity resolved once
+- Downstream layers ignore original input shape
+
+---
+
+## 🔄 Step 2 — Marshmallow Mapping & Transformation
+
+Marshmallow now performs **explicit, deterministic transformations**, such as:
+
+### Concatenation
+```text
+full_name = first_name + " " + last_name
+```
+### Date Formatting
+```text
+ISO → DD-Mon-YYYY
+```
+## 🧪 Conceptual Marshmallow Output
+
+```json
+{
+  "full_name": "PAULSTALIN GODFREY",
+  "passport_number": "B9517607",
+  "nationality": "Indian",
+  "date_of_birth": "22-Jan-2000"
+}
+```
+## ✅ Step 3 — Pydantic Contract Validation
+
+The transformed payload is passed to a **Pydantic output model**.
+
+Pydantic enforces:
+- Required fields
+- Data types
+- Regex / format constraints
+
+---
+
+### Validation Outcomes
+
+**If validation fails:**
+- Execution stops immediately
+
+**If validation succeeds:**
+- Output is guaranteed correct
+
+---
+
+## 🎉 Final Output (Consumer-Ready)
+
+```json
+{
+  "full_name": "PAULSTALIN GODFREY",
+  "passport_number": "B9517607",
+  "nationality": "Indian",
+  "date_of_birth": "22-Jan-2000"
+}
 ```
 
 
-## 🪜 Step-by-Step Flow of Events
-
-### Step 1: Input JSON is Received
-- The system accepts a **raw JSON dictionary**
-- No assumptions are made about its structure
-- No validation occurs at this stage
-
----
-
-### Step 2: Marshmallow Schema Normalizes Input
-- Each output has a corresponding **Marshmallow schema**
-- The schema:
-  - Resolves multiple possible input paths
-  - Normalizes nested or inconsistent structures
-  - Produces a canonical intermediate dictionary
-
-At this stage:
-- Keys are **stable**
-- Values are **not yet trusted**
-
----
-
-### Step 3: Canonical Dictionary is Produced
-- Marshmallow emits a **normalized dictionary**
-- This dictionary represents the best possible interpretation of the input
-- It is still considered **unvalidated**
-
----
-
-### Step 4: Orchestrator Assembles Output Payload
-The orchestrator:
-- Invokes the appropriate Marshmallow schema
-- Performs minimal, explicit derivations (e.g. concatenation)
-- Prepares a payload matching the output model’s shape
-
-**Constraints:**
-- Contains no business rules
-- Contains only coordination logic
-
----
-
-### Step 5: Pydantic Output Model Validates the Contract
-- The prepared payload is passed into a **Pydantic output model**
-- Pydantic enforces:
-  - Required fields
-  - Types
-  - Declarative constraints (patterns, lengths, formats)
-
-If validation fails:
-- Execution stops immediately
-- No partial or incorrect output is emitted
-
----
-
-### Step 6: Final Output is Emitted
-On successful validation:
-- The output is serialized
-- The result is consumer-ready
-
-All downstream systems can **fully trust the output schema**
-
----
-
-## 📐 Output Models as Contracts
-Output models define **what must exist**, not **how data is derived**.
-
-They:
-- Contain no transformation logic
-- Contain no mapping logic
-- Act as strict runtime contracts
-
-This ensures:
-- Schema drift is detected immediately
-- Invalid data never propagates downstream
-
----
-
-## 🔑 Key Architectural Guarantees
-- ✅ Input variability is isolated
-- ✅ Output correctness is enforced centrally
-- ✅ Transformation logic is explicit and reviewable
-- ✅ No silent failures or heuristic guessing
-- ✅ Clear ownership of responsibilities
