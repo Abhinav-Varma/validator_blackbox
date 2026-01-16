@@ -44,16 +44,17 @@ The system is composed of **three clearly separated layers**:
 
 ---
 
-## 🔄 High‑Level Flow
+## 🔄 STEP BY STEP EXECUTION
 
 ```mermaid
 flowchart TD
-    A[Raw Input JSON] --> B[Marshmallow Schema<br/>Mapping & Normalization]
-    B --> C[Canonical Intermediate Dict]
+    A[Raw Input JSON] --> B[Marshmallow Schema]
+    B --> C[Canonical Dictionary]
     C --> D[Orchestrator]
-    D --> E[Pydantic Output Model<br/>Contract Validation]
-    E --> F[Final Validated Output]
+    D --> E[Pydantic Output Model]
+    E --> F[Validated Output]
 
+```
 
 
 ## 🪜 Step-by-Step Flow of Events
