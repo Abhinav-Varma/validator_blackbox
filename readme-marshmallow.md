@@ -37,7 +37,7 @@ Each stage answers exactly one question:
 ```mermaid
 flowchart TD
     A[Raw Input JSON] --> B[Canonical Field Resolver]
-    B -->|semantic resolution| C[Canonical JSON]
+    B -->[semantic resolution] C[Canonical JSON]
     C --> D[Marshmallow Mapping & Transformation]
     D --> E[Intermediate Transformed Dict]
     E --> F[Pydantic Output Model]
