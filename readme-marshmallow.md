@@ -49,7 +49,7 @@ flowchart TD
 The **Canonical Field Resolver** is a dedicated layer that:
 
 - Scans all keys in the input JSON
-- Applies heuristics, fuzzy matching, or optional AI
+- Applies fuzzy matching, or optional AI
 - Determines which input key corresponds to which **canonical field**
 - Rewrites the input JSON using **stable canonical names**
 
