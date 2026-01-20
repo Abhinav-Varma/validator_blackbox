@@ -1,13 +1,21 @@
-from pydantic import BaseModel, Field
-from src.transform import transformer
+# src/main.py
+import json
+from src.custom_basemodel import TransformBaseModel
 
-class OutputModel(BaseModel):
-    full_name: str = Field(
-        default_factory=lambda: transformer("CONCATENATE(CAPITALIZE('john'), CAPITALIZE('doe'))"),
-        description="Full name of the customer"
+# Define the output model using custom base model
+class OutputModel(TransformBaseModel):
+    full_name: str = TransformBaseModel.TransformField(
+        description="Full name of the customer",
+        function_logic="CONCATENATE(CAPITALIZE($..first_name), CAPITALIZE($..last_name))"
     )
 
 # Example usage
 if __name__ == "__main__":
-    output = OutputModel()
-    print("Final Full Name:", output.full_name)  # Expected Output: "John Doe"
+    # Load JSON data from file
+    with open('sample.json', 'r') as f:
+        json_data = json.load(f)
+    
+    # Create model instance with automatic transformation
+    output = OutputModel(json_data=json_data)
+    
+    print("Final Full Name:", output.full_name)  # Expected Output: "John . Doe"
