@@ -20,9 +20,6 @@ This framework provides:
 - **Pydantic-based validation** with automatic in field transformation
 - **Dynamic data extraction** from JSON files
 - BaseModel features are preserved
-Have to improve:
-- Structuring
-- etc. HELP!
 
 ### 🚀 Quick Start
 
