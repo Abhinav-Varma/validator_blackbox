@@ -1,0 +1,154 @@
+[
+  {
+    "StateCode":"01",
+    "StateName":"Jammu & Kashmir"
+  },
+  {
+    "StateCode":"02",
+    "StateName":"Himachal Pradesh"
+  },
+  {
+    "StateCode":"03",
+    "StateName":"Punjab"
+  },
+  {
+    "StateCode":"04",
+    "StateName":"Chandigarh"
+  },
+  {
+    "StateCode":"05",
+    "StateName":"Uttarakhand"
+  },
+  {
+    "StateCode":"06",
+    "StateName":"Haryana"
+  },
+  {
+    "StateCode":"07",
+    "StateName":"Delhi"
+  },
+  {
+    "StateCode":"08",
+    "StateName":"Rajasthan"
+  },
+  {
+    "StateCode":"09",
+    "StateName":"Uttar Pradesh"
+  },
+  {
+    "StateCode":"10",
+    "StateName":"Bihar"
+  },
+  {
+    "StateCode":"11",
+    "StateName":"Sikkim"
+  },
+  {
+    "StateCode":"12",
+    "StateName":"Arunachal Pradesh"
+  },
+  {
+    "StateCode":"13",
+    "StateName":"Nagaland"
+  },
+  {
+    "StateCode":"14",
+    "StateName":"Manipur"
+  },
+  {
+    "StateCode":"15",
+    "StateName":"Mizoram"
+  },
+  {
+    "StateCode":"16",
+    "StateName":"Tripura"
+  },
+  {
+    "StateCode":"17",
+    "StateName":"Meghalaya"
+  },
+  {
+    "StateCode":"18",
+    "StateName":"Assam"
+  },
+  {
+    "StateCode":"19",
+    "StateName":"West Bengal"
+  },
+  {
+    "StateCode":"20",
+    "StateName":"Jharkhand"
+  },
+  {
+    "StateCode":"21",
+    "StateName":"Odisha"
+  },
+  {
+    "StateCode":"22",
+    "StateName":"Chhattisgarh"
+  },
+  {
+    "StateCode":"23",
+    "StateName":"Madhya Pradesh"
+  },
+  {
+    "StateCode":"24",
+    "StateName":"Gujarat"
+  },
+  {
+    "StateCode":"25",
+    "StateName":"Daman & Diu"
+  },
+  {
+    "StateCode":"26",
+    "StateName":"Dadra & Nagar Haveli"
+  },
+  {
+    "StateCode":"27",
+    "StateName":"Maharashtra"
+  },
+  {
+    "StateCode":"28",
+    "StateName":"Andhra Pradesh (Old)"
+  },
+  {
+    "StateCode":"29",
+    "StateName":"Karnataka"
+  },
+  {
+    "StateCode":"30",
+    "StateName":"Goa"
+  },
+  {
+    "StateCode":"31",
+    "StateName":"Lakshadweep"
+  },
+  {
+    "StateCode":"32",
+    "StateName":"Kerala"
+  },
+  {
+    "StateCode":"33",
+    "StateName":"Tamil Nadu"
+  },
+  {
+    "StateCode":"34",
+    "StateName":"Puducherry"
+  },
+  {
+    "StateCode":"35",
+    "StateName":"Andaman & Nicobar Islands"
+  },
+  {
+    "StateCode":"36",
+    "StateName":"Telangana"
+  },
+  {
+    "StateCode":"37",
+    "StateName":"Andhra Pradesh"
+  },
+  {
+    "StateCode":"38",
+    "StateName":"Ladakh"
+  }
+]

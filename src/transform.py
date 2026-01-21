@@ -1,49 +1,74 @@
-# src/transform.py
 from typing import Dict, Any, Optional
 import re
 from jsonpath_ng import parse
-from src.function_pool import CONCATENATE, CAPITALIZE
+from src.function_pool import GST_DETAILS_FOR
+from src.function_pool import (
+    CONCATENATE,
+    CAPITALIZE,
+    JOIN,
+    SUBSTR,
+    GST_STATE_NAME,
+)
 
 FUNCTIONS = {
     "CONCATENATE": CONCATENATE,
     "CAPITALIZE": CAPITALIZE,
+    "JOIN": JOIN,
+    "SUBSTR": SUBSTR,
+    "GST_DETAILS_FOR": GST_DETAILS_FOR,
+    "GST_STATE_NAME": GST_STATE_NAME,
 }
 
-def transformer(logic: str, json_data: Optional[Dict[str, Any]] = None) -> str:
-    """
-    Transform logic with optional JSONPath support.
-    Replaces JSONPath expressions like $..field with actual values from json_data.
-    """
+FORBIDDEN_TOKENS = [
+    "__", "import", "eval", "exec", "open",
+    "globals", "locals", "lambda", "class",
+    "os.", "sys.", "subprocess"
+]
+
+
+def transformer(logic: str, json_data: Optional[Dict[str, Any]] = None) -> Any:
+    # Basic guardrail
+    for token in FORBIDDEN_TOKENS:
+        if token in logic:
+            raise ValueError(f"Forbidden token in expression: {token}")
+
     if json_data is None:
-        # Original behavior without JSON data
+        safe_globals = {"__builtins__": {}}
         exec_context = {**FUNCTIONS}
-        exec(f"output = {logic}", {}, exec_context)
-        return exec_context['output']
-    
-    # Find and replace JSONPath expressions
-    jsonpath_pattern = r'\$[^),)\s]+'
+        exec(f"output = {logic}", safe_globals, exec_context)
+        return exec_context["output"]
+
+    jsonpath_pattern = r'\$[^),\s]+'
     modified_logic = logic
-    
-    # Extract all JSONPath expressions
+
     jsonpath_matches = re.findall(jsonpath_pattern, logic)
-    
-    # Process each JSONPath expression
-    for jsonpath_expr in set(jsonpath_matches):  # Use set to avoid duplicates
+
+    for jsonpath_expr in set(jsonpath_matches):
         try:
             parser = parse(jsonpath_expr)
             matches = parser.find(json_data)
             if matches:
-                value = str(matches[0].value)
-                # Replace JSONPath with quoted string value
-                modified_logic = modified_logic.replace(jsonpath_expr, f"'{value}'")
+                value = matches[0].value
+
+                if isinstance(value, str):
+                    replacement = f"'{value}'"
+                else:
+                    # lists / dicts / numbers → inject as Python literal
+                    replacement = repr(value)
+
+                modified_logic = modified_logic.replace(
+                    jsonpath_expr, replacement
+                )
             else:
-                # If no match found, replace with empty string
-                modified_logic = modified_logic.replace(jsonpath_expr, "''")
-        except Exception as e:
-            print(f"Warning: Could not parse JSONPath {jsonpath_expr}: {e}")
-            modified_logic = modified_logic.replace(jsonpath_expr, "''")
-    
-    # Execute the modified logic
+                modified_logic = modified_logic.replace(
+                    jsonpath_expr, "''"
+                )
+        except Exception:
+            modified_logic = modified_logic.replace(
+                jsonpath_expr, "''"
+            )
+
+    safe_globals = {"__builtins__": {}}
     exec_context = {**FUNCTIONS}
-    exec(f"output = {modified_logic}", {}, exec_context)
-    return exec_context['output']
+    exec(f"output = {modified_logic}", safe_globals, exec_context)
+    return exec_context["output"]
