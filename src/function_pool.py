@@ -1,5 +1,6 @@
-from src.gst_lookup import GST_STATE_CODE_MAP
-
+import json
+with open("gstin_state_codes_india.json","r") as f:
+    GST_STATE_CODE_MAP=json.load(f)
 
 def GST_DETAILS_FOR(gst_numbers, all_records):
     """
