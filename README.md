@@ -1,277 +1,268 @@
-# JSON Transformation Framework (Python JSLT Equivalent)
+JSON Transformation Framework
+=============================
 
-## 📋 Table of Contents
-- [Overview](#overview)
-- [Quick Start](#quick-start)
-- [Detailed Architecture](#detailed-architecture)
-- [Core Components](#core-components)
-- [How It Works](#how-it-works)
-- [Features](#features)
-- [Usage Examples](#usage-examples)
-- [JSONPath Support](#jsonpath-support)
-- [Pydantic Integration](#pydantic-integration)
-- [Extending the Framework](#extending-the-framework)
+### Declarative, Path‑Driven Data Mapping Engine
 
-## 🎯 Overview
+Overview
+--------
 
-This framework provides:
-- **JSON querying** using JSONPath expressions
-- **JSON transformation** using custom functions in field
-- **Pydantic-based validation** with automatic in field transformation
-- **Dynamic data extraction** from JSON files
-- BaseModel features are preserved
+This framework provides a **declarative way to transform structured JSON data into strongly‑typed output models**.
 
-### 🚀 Quick Start
+Instead of writing imperative transformation code, users define:
 
-```python
-# 1. Define a model with transformation logic
-class CustomerModel(TransformBaseModel):
-    full_name: str = TransformBaseModel.TransformField(
-        function_logic="CONCATENATE(CAPITALIZE($..first_name), '.', CAPITALIZE($..last_name))"
-    )
-
-# 2. Load JSON data and create model
-with open('data.json') as f:
-    json_data = json.load(f)
-
-customer = CustomerModel(json_data=json_data)
-print(customer.full_name)  # Output: "John . Doe"
-```
-
-## 🔍 Detailed Architecture
-
-### Logical Flow
-
-```
-JSON File → JSONPath Extraction → Function Execution → Pydantic Model
-     ↓              ↓                    ↓                ↓
-  {"first_name":  $..first_name →   CAPITALIZE('john')  →  full_name: "John"
-   "last_name":   $..last_name →   CAPITALIZE('doe')    →  "John . Doe"
-   "doe"}
-```
-
-### Core Components
-
-#### 1. **Function Pool** (`src/function_pool.py`)
-- Contains transformation functions (CONCATENATE, CAPITALIZE)
-- Extensible - add your own functions here
-- Functions are automatically available in transformation context
-
-#### 2. **Transformer Engine** (`src/transform.py`)
-- Parses JSONPath expressions from logic strings
-- Extracts values from JSON data using jsonpath-ng
-- Executes transformation functions with extracted values
-- Handles errors gracefully
-
-#### 3. **TransformBaseModel** (`src/custom_basemodel.py`)
-- Extends Pydantic's BaseModel
-- Provides `TransformField()` for defining transformation logic
-- Automatically applies transformations during model creation
-- Maintains all BaseModel features (validation, serialization, etc.)
-
-#### 4. **Demonstration** (`src/main.py`)
-- Has a smoll demo on the working
-
-## 🏗️ How It Works
-
-### Step 1: JSONPath Parsing
-```python
-# Logic string: "CONCATENATE(CAPITALIZE($..first_name), '.', CAPITALIZE($..last_name))"
-# JSON data: {"first_name": "john", "details": {"last_name": "doe"}}
-
-# The transformer finds JSONPath expressions:
-# - $..first_name → "john"
-# - $..last_name → "doe"
-```
-
-### Step 2: Value Extraction
-```python
-# Uses jsonpath-ng library to extract values
-parser = parse("$..first_name")
-matches = parser.find(json_data)
-# matches[0].value = "john"
-```
-
-### Step 3: Function Execution
-```python
-# Replaces JSONPath with extracted values:
-# "CONCATENATE(CAPITALIZE('john'), CAPITALIZE('doe'))"
-
-# Executes in context with available functions:
-exec_context = {"CONCATENATE": CONCATENATE, "CAPITALIZE": CAPITALIZE}
-# Result: "John Doe"
-```
-
-### Step 4: Model Population
-```python
-# Transformed value is assigned to model field
-customer.full_name = "John Doe"
-```
-
-## ✨ Features
-
-### 🔧 JSONPath Support (CHECK)
-- Deep querying with `$..field` syntax
-- Nested object access
-- Array handling
-- Fallback to empty string if path not found
-
-### 🛡️ Pydantic Integration (CHECK)
-All BaseModel features are preserved
-
-#### Validation
-```python
-class CustomerModel(TransformBaseModel):
-    full_name: str = TransformBaseModel.TransformField(
-        function_logic="CONCATENATE(CAPITALIZE($..first_name), CAPITALIZE($..last_name))"
-    )
-    age: int = Field(ge=0, le=150)  # Standard Pydantic validation
+*   **where data comes from** (using paths)
     
-customer = CustomerModel(json_data=json_data, age=25)
-```
-
-#### Field Validators
-```python
-class CustomerModel(TransformBaseModel):
-    full_name: str = TransformBaseModel.TransformField(...)
+*   **how data is transformed** (using composable functions)
     
-    @field_validator('full_name')
-    @classmethod
-    def validate_name(cls, v: str) -> str:
-        if len(v) < 2:
-            raise ValueError('Name too short')
-        return v
-```
-
-#### Computed Fields
-```python
-class CustomerModel(TransformBaseModel):
-    full_name: str = TransformBaseModel.TransformField(...)
+*   **what the final output looks like** (via typed models)
     
-    @computed_field
-    @property
-    def name_length(self) -> int:
-        return len(self.full_name)
-```
 
-#### Serialization
-```python
-customer = CustomerModel(json_data=json_data)
-customer.model_dump()  # {'full_name': 'John . Doe'}
-customer.model_dump_json()  # '{"full_name": "John . Doe"}'
-```
+Transformation logic is represented as **expression trees** that are evaluated at runtime against in‑memory JSON data.
 
-#### Config Options
-```python
-class CustomerModel(TransformBaseModel):
-    class Config:
-        validate_assignment = True  # Validate on assignment
-        use_enum_values = True      # Use enum values instead of instances
-        # ... all standard Pydantic config options
-```
+Core Idea
+---------
 
-## 📖 Usage Examples
+> **Transformation logic is described, not executed directly.**
 
-### Basic Usage
-```python
-# Define model
-class PersonModel(TransformBaseModel):
-    display_name: str = TransformBaseModel.TransformField(
-        function_logic="CONCATENATE(CAPITALIZE($..first_name), CAPITALIZE($..last_name))"
-    )
+The system separates:
 
-# Use model
-person = PersonModel(json_data={"first_name": "alice", "last_name": "smith"})
-print(person.display_name)  # "Alice Smith"
-```
-
-### Multiple Fields
-```python
-class CustomerModel(TransformBaseModel):
-    full_name: str = TransformBaseModel.TransformField(
-        function_logic="CONCATENATE(CAPITALIZE($..first_name), CAPITALIZE($..last_name))"
-    )
-    email_domain: str = TransformBaseModel.TransformField(
-        function_logic="CAPITALIZE($..email)"
-    )
-    is_premium: bool = Field(default=False)
-```
-
-### With Validators (WHY?)
-```python
-class ValidatedModel(TransformBaseModel):
-    transformed_field: str = TransformBaseModel.TransformField(...)
-    normal_field: str
+*   **Data access** (paths)
     
-    @field_validator('transformed_field', 'normal_field')
-    @classmethod
-    def validate_fields(cls, v: str) -> str:
-        return v.strip()
+*   **Transformation intent** (function composition)
+    
+*   **Execution** (evaluation engine)
+    
+
+This allows complex mappings to remain readable, testable, and extensible.
+
+Key Capabilities
+----------------
+
+*   Declarative transformation definitions
+    
+*   JSONPath‑based data access
+    
+*   Composable transformation expressions
+    
+*   Typed output models
+    
+*   Single JSON load per execution
+    
+*   Deterministic evaluation order
+    
+*   Editor‑friendly authoring (autocomplete, linting, refactoring)
+    
+
+High‑Level Architecture
+-----------------------
+
+
+```mermaid
+flowchart LR
+    A[Input JSON] --> B[Path Objects]
+    B --> C[Expression Tree]
+    C --> D[Evaluation Engine]
+    D --> E[Transformation Functions]
+    D --> F[Typed Output Models]
+
 ```
 
-## 🔧 Extending the Framework
 
-### Adding New Functions
-```python
-# src/function_pool.py
-def UPPERCASE(text: str) -> str:
-    return text.upper()
 
-def REVERSE(text: str) -> str:
-    return text[::-1]
+Core Concepts
+-------------
 
-# src/transform.py
-FUNCTIONS = {
-    "CONCATENATE": CONCATENATE,
-    "CAPITALIZE": CAPITALIZE,
-    "UPPERCASE": UPPERCASE,
-    "REVERSE": REVERSE,
+### 1\. Path
+
+A **Path** represents _where_ data should be retrieved from the input JSON.
+
+*   Encapsulates a JSONPath expression
+    
+*   Does not execute logic
+    
+*   Does not perform I/O
+    
+*   Can be reused across transformations
+    
+
+Conceptually:
+
+> “This value comes from here in the JSON.”
+
+### 2\. Transformation Expressions
+
+Transformations are built by **composing functions and paths** into an expression tree.
+
+Each node in the tree represents either:
+
+*   a path lookup
+    
+*   a function application
+    
+*   a literal value
+    
+
+This tree fully describes _what_ computation should occur.
+
+### 3\. Evaluation Engine
+
+At runtime, the evaluation engine:
+
+*   Walks the expression tree recursively
+    
+*   Resolves paths against the in‑memory JSON
+    
+*   Applies transformation functions to resolved values
+    
+*   Produces final field values
+    
+
+This keeps execution deterministic and easy to reason about.
+
+Runtime Execution Flow (Function Call Perspective)
+--------------------------------------------------
+
+The diagram below shows **exactly how functions are invoked during runtime** for a typical transformation.
+
+### Example Conceptual Transformation
+
+“Capitalize first name + capitalize surname → full name”
+
+```mermaid
+sequenceDiagram
+    participant Model as Output Model
+    participant Eval as Evaluator
+    participant Path1 as Path(first_name)
+    participant Path2 as Path(surname)
+    participant Cap as CAPITALIZE
+    participant Concat as CONCATENATE
+    participant JSON as In‑Memory JSON
+
+    Model->>Eval: evaluate(full_name expression)
+    Eval->>Path1: resolve path
+    Path1->>JSON: query JSON
+    JSON-->>Path1: "john"
+    Path1-->>Eval: "john"
+
+    Eval->>Cap: apply function
+    Cap-->>Eval: "John"
+
+    Eval->>Path2: resolve path
+    Path2->>JSON: query JSON
+    JSON-->>Path2: "doe"
+    Path2-->>Eval: "doe"
+
+    Eval->>Cap: apply function
+    Cap-->>Eval: "Doe"
+
+    Eval->>Concat: apply function
+    Concat-->>Eval: "John Doe"
+
+    Eval-->>Model: set field value
+```
+Execution Characteristics
+-------------------------
+
+*   JSON is loaded **once**
+    
+*   All paths resolve against the same in‑memory data
+    
+*   Functions are applied only after their inputs are resolved
+    
+*   Evaluation proceeds **inside‑out**, similar to normal function calls
+    
+*   Errors surface at the exact transformation step where they occur
+    
+
+Sample Input
+------------
+```json
+{
+  "first_name": "john",
+  "surname": "doe",
+  "visa_request_information": {
+    "visa_request": {
+      "from_country_full_name": "India",
+      "to_country_full_name": "Germany",
+      "departure_date_formatted": "2024-01-01",
+      "arrival_date_formatted": "2024-01-15"
+    }
+  },
+  "gst_records": [
+    { "gst_number": "29ABCDE1234F1Z5" },
+    { "gst_number": "07LMNOP9876Q1Z9" }
+  ]
 }
-```
 
-### Custom TransformBaseModel (Extending the framework... is this required??)
-```python
-class CustomTransformModel(TransformBaseModel):
-    class Config:
-        # Custom configuration
-        validate_all = True
-        use_enum_values = True
+```
+Sample Output
+-------------
+```json
+{
+  "full_name": "John Doe",
+  "travel_summary": "India → Germany (2024-01-01 to 2024-01-15)",
+  "gst_outputs": [
+    {
+      "gst_number": "29ABCDE1234F1Z5",
+      "pan_number": "ABCDE1234F",
+      "state_name": "Karnataka"
+    },
+    {
+      "gst_number": "07LMNOP9876Q1Z9",
+      "pan_number": "LMNOP9876Q",
+      "state_name": "Delhi"
+    }
+  ]
+}
+
+```
+Design Principles
+-----------------
+
+### Declarative by Default
+
+Transformations describe intent, not control flow.
+
+### Separation of Responsibilities
+
+*   Paths → data access
     
-    @staticmethod
-    def CustomTransformField(function_logic: Optional[str] = None, **kwargs):
-        """Custom field factory with additional options"""
-        return TransformFieldInfo(function_logic=function_logic, **kwargs)
-```
+*   Functions → transformation logic
+    
+*   Evaluator → execution
+    
+*   Models → validation & structure
+    
 
-## 🧪 Testing (This is wrong #needfix + Further parts need fix as well)
+### Predictable Execution
 
-```python
-# Test with different JSON structures
-test_cases = [
-    {"first_name": "john", "last_name": "doe"},
-    {"user": {"first_name": "jane", "last_name": "smith"}},
-    {"data": {"person": {"first_name": "bob", "last_name": "johnson"}}},
-]
+The same input and transformation definitions always produce the same output.
 
-for test_data in test_cases:
-    model = CustomerModel(json_data=test_data)
-    print(f"Result: {model.full_name}")
-```
+Extensibility
+-------------
 
-## 📊 Performance Considerations
+The framework naturally supports:
 
-- JSONPath expressions are cached during transformation
-- Functions are executed in a pre-built context for efficiency
-- Pydantic's validation is only run once after transformation
-- Large JSON files are processed incrementally where possible
+*   Adding new transformation functions
+    
+*   Introducing caching at the evaluator level
+    
+*   Expanding the DSL with conditionals or defaults
+    
+*   Supporting additional input formats
+    
 
-## 🎯 Summary
+Summary
+-------
 
-This framework provides a powerful, extensible way to:
-1. **Query JSON data** using JSONPath expressions
-2. **Transform data** using custom functions
-3. **Validate results** using Pydantic's robust validation system
-4. **Maintain type safety** throughout the process
-5. **Extend functionality** by adding new functions and validators
+This framework provides a **clear, structured, and extensible approach to JSON transformation** by modeling data access and transformation logic explicitly.
 
-The key innovation is the seamless integration of JSONPath querying, functional transformation, and Pydantic validation in a single, cohesive framework that maintains all the benefits of standard Pydantic models.
+By separating definition from execution and representing transformations as expression trees, it enables:
+
+*   readable transformation definitions
+    
+*   strong typing
+    
+*   deterministic runtime behavior
+    
+*   long‑term maintainability
