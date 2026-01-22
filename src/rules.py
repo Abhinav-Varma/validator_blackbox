@@ -9,6 +9,7 @@ from src.function_pool import (  # whitelist only what you need
     CAPITALIZE,
     join_parts,
     GST_DETAILS_ALL,
+    SUBSTR,
 )
 
 # ------------------------------------------------------------------
@@ -18,9 +19,9 @@ class OutputModel(TransformBaseModel):
     full_name: str = Field(
         description="Full name of the customer",
         transform=join_parts(
-            path("$..first_name") | CAPITALIZE(),
+            path("$..first_name") | SUBSTR(0,10) | CAPITALIZE(),
             " ",
-            path("$..surname") | CAPITALIZE(),
+            path("$..surname") | CAPITALIZE() | SUBSTR(0,7),
         ),
     )
 

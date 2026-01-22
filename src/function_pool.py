@@ -32,6 +32,14 @@ def CONCAT(sep: str = " ") -> "Step[list, str]":
     from src.step_engine import Step
     return Step(lambda pieces: sep.join(map(str, pieces)))
 
+def JOIN() -> "Step[list, str]":
+    from src.step_engine import Step
+    return Step("".join)
+
+def SPLIT(sep: str = " ") -> "Step[str, tuple[str, ...]]":
+    from src.step_engine import Step
+    return Step(lambda s: tuple(s.split(sep)))
+
 def join_parts(*parts: Any) -> "Step[Dict[str, Any], str]":
     from src.step_engine import Step
     return Step(lambda blob: "".join(

@@ -97,7 +97,7 @@ class Path(Step[Dict[str, Any], Any]):
             return matches[0].value
         return [m.value for m in matches]
 ```
-- **Single walk** per path **per document** (see optimisation section earlier).  
+- **Single walk** per path **per document**.  
 - Returns **scalar** when only one hit, **list** otherwise – mimics `jsonpath_ng` default.
 
 ---
@@ -256,13 +256,48 @@ class PlayModel(TransformBaseModel):
 That is **literally all that is required** – no kernel change, no registration call, no AST whitelist update.
 
 ---
+### Multipart Commands
 
+A Step is unary by definition: Step[T, U] = one input → one output.
+#### Method 1
+We will need to create a blob of the type of input required for the output in order for the helper to ingest as follows
+
+Helper:
+```python
+def function(...Can be any variable it needs to take...) -> Step[List/Dict/etc.[Any], str]:
+    return Step(lambda blob: function(blob)
+    )
+```
+
+Usage:
+```python
+# build the container with pure Python, then pipe
+transform = (
+    lambda blob: [path("$..a")(blob), path("$..b")(blob), "literal",...]
+) | function()
+```
+#### Method 2
+Pass multiple values into the function itself and create the blob* in the helper. Look at join_parts() for example.
+
+*depends on usage
+#### Multipart Outputs
+When a Step must return several independent pieces (a tuple, dict, list, named tuple, dataclass, etc.) you simply let the Step emit that object – the next Step in the chain must expect that shape as its input type.
+
+Next Step can pick what it needs:
+```python
+step = (
+    path("$.gst_number")
+    | EXTRACT_GST_COMPONENTS()
+    | Step(lambda d: d["state_code"])   # only state code
+    | GST_STATE_NAME()                  # returns string
+)
+```
 ## 7. Common pitfalls & how to avoid them
 
 | Symptom | Reason | Fix |
 |---------|--------|-----|
 | `TypeError: sequence item 0: expected str instance, Path found` | You passed a **list containing raw Path objects** to `JOIN`/`CONCAT`. | Use `join_parts()` or **resolve each path yourself** inside a lambda. |
-| `NameError: name 'print' is not defined` | You tried to use something **not imported from function_pool**. | Import only from `function_pool`; add new helpers there. |
+| `NameError: name 'print' is not defined` | You tried to use something **not imported from function_pool**. | Import only from `function_pool`; add new helpers there. Or use qualified imports (fp.CAPITALIZE)|
 | IDE shows `Any` for chain result | You forgot to **parameterise** the step or **return type hint**. | Add `-> "Step[In, Out]"` to your helper. |
 
 ---
