@@ -176,7 +176,7 @@ Execution Characteristics
 
 Sample Input
 ------------
-
+```json
 {
   "first_name": "john",
   "surname": "doe",
@@ -194,10 +194,10 @@ Sample Input
   ]
 }
 
-
+```
 Sample Output
 -------------
-
+```json
 {
   "full_name": "John Doe",
   "travel_summary": "India → Germany (2024-01-01 to 2024-01-15)",
@@ -215,7 +215,7 @@ Sample Output
   ]
 }
 
-
+```
 Design Principles
 -----------------
 
