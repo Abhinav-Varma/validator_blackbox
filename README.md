@@ -56,19 +56,17 @@ Key Capabilities
 High‑Level Architecture
 -----------------------
 
-flowchart LR
-    A[Input JSON]
-    B[Path Objects]
-    C[Expression Tree]
-    D[Evaluation Engine]
-    E[Transformation Functions]
-    F[Typed Output Models]
+### High-Level Architecture
 
-    A --> B
-    B --> C
-    C --> D
-    D --> E
-    D --> F
+```mermaid
+flowchart LR
+    A[Input JSON] --> B[Path Objects]
+    B --> C[Expression Tree]
+    C --> D[Evaluation Engine]
+    D --> E[Transformation Functions]
+    D --> F[Typed Output Models]
+
+```
 
 
 
