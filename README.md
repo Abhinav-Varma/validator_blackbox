@@ -1,4 +1,4 @@
-# Python-JSLT Transformer – Deep-Dive README
+# Python-JSON Transformer
 
 **Audience:** you want to add new transformation functions, understand how the engine chains them, and build new `OutputModel`s without surprises.
 
