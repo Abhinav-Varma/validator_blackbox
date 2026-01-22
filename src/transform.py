@@ -1,7 +1,7 @@
 from typing import Dict, Any, Optional
 import re
+from src.function_pool import GST_DETAILS_ALL
 from jsonpath_ng import parse
-from src.function_pool import GST_DETAILS_FOR
 from src.function_pool import (
     CONCATENATE,
     CAPITALIZE,
@@ -15,8 +15,8 @@ FUNCTIONS = {
     "CAPITALIZE": CAPITALIZE,
     "JOIN": JOIN,
     "SUBSTR": SUBSTR,
-    "GST_DETAILS_FOR": GST_DETAILS_FOR,
     "GST_STATE_NAME": GST_STATE_NAME,
+    "GST_DETAILS_ALL": GST_DETAILS_ALL,
 }
 
 FORBIDDEN_TOKENS = [

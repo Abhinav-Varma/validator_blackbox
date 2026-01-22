@@ -732,5 +732,10 @@
       "path_messages": null,
       "display_status_key": null
     }
-  }
+  },
+    "gst_records": [
+    { "gst_number": "29ABCDE1234F1Z5" },
+    { "gst_number": "27PQRSX5678L1Z3" },
+    { "gst_number": "07LMNOP9876Q1Z9" }
+  ]
 }

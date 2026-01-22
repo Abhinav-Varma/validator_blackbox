@@ -1,9 +1,7 @@
-# src/main.py
 import json
 from typing import List, Dict
 from src.custom_basemodel import TransformBaseModel
 
-# Define the output model using custom base model
 class OutputModel(TransformBaseModel):
     full_name: str = TransformBaseModel.TransformField(
         description="Full name of the customer",
@@ -27,45 +25,26 @@ class TravelSummaryModel(TransformBaseModel):
         )
     )
 
-class RequestedGSTModel(TransformBaseModel):
+class GSTAllModel(TransformBaseModel):
     gst_outputs: List[Dict[str, str]] = TransformBaseModel.TransformField(
-        description="GST details only for requested GST numbers",
-        function_logic="GST_DETAILS_FOR($..requested_gst_numbers, $..gst_records)"
+        description="GST details for ALL GST numbers",
+        function_logic="GST_DETAILS_ALL($..gst_records)"
     )
 
-
-# Example usage
 if __name__ == "__main__":
-    # Load JSON data from file
-    with open('sample.json', 'r') as f:
+    with open("sample.json", "r") as f:
         json_data = json.load(f)
-    
-    # Create model instance with automatic transformation
+
     output = OutputModel(json_data=json_data)
-    print("Final Full Name:", output.full_name)  # Expected Output: "John . Doe"
+    print("Output 1")
+    print("\nFinal Full Name:", output.full_name)
 
     travel = TravelSummaryModel(json_data=json_data)
+    print("\nOutput 2")
     print("\nTravel Summary:", travel.travel_summary)
 
-    # Load base JSON (sample2.json)
-    with open("sample2.json", "r") as f:
-        base_json = json.load(f)
-
-    # Specify which GSTs you want (runtime selection)
-    requested_gsts = [
-        "29ABCDE1234F1Z5",
-        "07LMNOP9876Q1Z9",
-        "18GGGGG7777G1Z7"
-    ]
-
-    # Create a derived JSON for GST processing ONLY
-    gst_json = {
-        **base_json,
-        "requested_gst_numbers": requested_gsts
-    }
-
-    gst = RequestedGSTModel(json_data=gst_json)
-
-    print("\nRequested GST Outputs:")
-    for r in gst.gst_outputs:
+    gst_all = GSTAllModel(json_data=json_data)
+    print("\nOutput 3")
+    print("\nAll GST Outputs:")
+    for r in gst_all.gst_outputs:
         print(r)
