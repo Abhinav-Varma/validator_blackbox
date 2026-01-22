@@ -4,10 +4,6 @@ from pydantic import BaseModel, Field as PydanticField
 from pydantic.fields import FieldInfo
 from src.transform import transformer
 
-# ============================================================================
-# SECTION 1: Enhanced Field with function_logic support
-# ============================================================================
-
 class TransformFieldInfo(FieldInfo):
     """Enhanced FieldInfo that supports function_logic"""
     def __init__(self, *, function_logic: Optional[str] = None, **kwargs):
@@ -33,10 +29,6 @@ def Field(
         return TransformFieldInfo(function_logic=function_logic, **kwargs)
     else:
         return PydanticField(**kwargs)
-
-# ============================================================================
-# SECTION 2: TransformBaseModel Definition
-# ============================================================================
 
 class TransformBaseModel(BaseModel):
     """Base model that supports automatic transformation using standard Pydantic Field()"""
