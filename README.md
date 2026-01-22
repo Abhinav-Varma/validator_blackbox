@@ -56,7 +56,6 @@ Key Capabilities
 High‑Level Architecture
 -----------------------
 
-### High-Level Architecture
 
 ```mermaid
 flowchart LR
@@ -129,6 +128,7 @@ The diagram below shows **exactly how functions are invoked during runtime** f
 
 “Capitalize first name + capitalize surname → full name”
 
+```mermaid
 sequenceDiagram
     participant Model as Output Model
     participant Eval as Evaluator
@@ -159,7 +159,7 @@ sequenceDiagram
     Concat-->>Eval: "John Doe"
 
     Eval-->>Model: set field value
-
+```
 Execution Characteristics
 -------------------------
 
