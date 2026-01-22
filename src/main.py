@@ -1,15 +1,15 @@
 import json
 from typing import List, Dict
-from src.custom_basemodel import TransformBaseModel
+from src.custom_basemodel import TransformBaseModel, Field
 
 class OutputModel(TransformBaseModel):
-    full_name: str = TransformBaseModel.TransformField(
+    full_name: str = Field(
         description="Full name of the customer",
         function_logic="CONCATENATE(CAPITALIZE($..first_name), CAPITALIZE($..surname))"
     )
 
 class TravelSummaryModel(TransformBaseModel):
-    travel_summary: str = TransformBaseModel.TransformField(
+    travel_summary: str = Field(
         description="Human readable travel summary",
         function_logic=(
             "JOIN("
@@ -26,7 +26,7 @@ class TravelSummaryModel(TransformBaseModel):
     )
 
 class GSTAllModel(TransformBaseModel):
-    gst_outputs: List[Dict[str, str]] = TransformBaseModel.TransformField(
+    gst_outputs: List[Dict[str, str]] = Field(
         description="GST details for ALL GST numbers",
         function_logic="GST_DETAILS_ALL($..gst_records)"
     )
