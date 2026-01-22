@@ -1,50 +1,31 @@
-import json
+"""
+Pydantic base model that understands Step-based transforms.
+Importing this module makes `transform=` auto-complete appear in rules.py.
+"""
 from typing import Any, Dict, Optional
 from pydantic import BaseModel, Field as PydanticField
 from pydantic.fields import FieldInfo
-from src.transform import transformer
+from src.step_engine import Step  # re-exported for convenience
 
+# ------------------------------------------------------------------
+# Field descriptor
+# ------------------------------------------------------------------
 class TransformFieldInfo(FieldInfo):
-    """Enhanced FieldInfo that supports function_logic"""
-    def __init__(self, *, function_logic: Optional[str] = None, **kwargs):
+    def __init__(self, *, transform: Step[Any, Any] | None = None, **kwargs):
         super().__init__(**kwargs)
-        self.function_logic = function_logic
+        self.transform = transform
 
-# Override the Field function to support function_logic
-def Field(
-    *,
-    function_logic: Optional[str] = None,
-    **kwargs
-) -> FieldInfo:
-    """
-    Enhanced Field function that supports function_logic for transformations.
-    
-    Usage:
-        field_name: str = Field(
-            description="My field",
-            function_logic="CAPITALIZE($..field_name)"
-        )
-    """
-    if function_logic is not None:
-        return TransformFieldInfo(function_logic=function_logic, **kwargs)
-    else:
-        return PydanticField(**kwargs)
+def Field(*, transform: Step[Any, Any] | None = None, **kwargs) -> FieldInfo:
+    return TransformFieldInfo(transform=transform, **kwargs) if transform else PydanticField(**kwargs)
 
+# ------------------------------------------------------------------
+# Base model
+# ------------------------------------------------------------------
 class TransformBaseModel(BaseModel):
-    """Base model that supports automatic transformation using standard Pydantic Field()"""
-    
-    class Config:
-        arbitrary_types_allowed = True
-    
     def __init__(self, json_data: Optional[Dict[str, Any]] = None, **data):
-        # If json_data is provided, apply transformations
         if json_data is not None:
-            # Get all fields with transformation logic
-            for field_name, field_info in self.model_fields.items():
-                if field_name not in data:
-                    # Check if field has transformation logic
-                    if isinstance(field_info, TransformFieldInfo) and field_info.function_logic:
-                        # Apply transformation
-                        data[field_name] = transformer(field_info.function_logic, json_data)
-        
+            for name, field in self.model_fields.items():
+                if name not in data and isinstance(field, TransformFieldInfo) and field.transform:
+                    data[name] = field.transform(json_data)
         super().__init__(**data)
+        #print("DEBUG", name, "transform result", repr(data[name]), type(data[name]))

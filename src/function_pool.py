@@ -1,93 +1,70 @@
+"""
+All user-land transformation functions.
+Add new helpers here; they will be auto-available in rules.py
+"""
+from typing import List, Dict, Any
+from decimal import Decimal
 import json
-with open("gstin_state_codes_india.json","r") as f:
-    GST_STATE_CODE_MAP=json.load(f)
+import pathlib
 
-import json
-with open("gstin_state_codes_india.json","r") as f:
-    GST_STATE_CODE_MAP=json.load(f)
+# ----------  shared data ----------
+_GST_MAP_PATH = pathlib.Path(__file__).with_name("gstin_state_codes_india.json")
+GST_STATE_CODE_MAP: Dict[str, str] = json.loads(_GST_MAP_PATH.read_text())
 
-def GST_DETAILS_ALL(all_records):
-    """
-    Extract PAN + State for ALL GST numbers in gst_records.
-    Handles JSONPath returning nested list: [[{...}, {...}]]
-    """
-    # normalize jsonpath result
-    if all_records and isinstance(all_records[0], list):
-        records = all_records[0]
-    else:
-        records = all_records
+# ----------  helpers ----------
+def _resolve_parts(blob: Dict[str, Any], parts: list) -> list[str]:
+    """Resolve Path objects inside a list of mixed literals / paths."""
+    from src.step_engine import Path
+    out: list[str] = []
+    for p in parts:
+        if isinstance(p, Path):
+            out.append(str(p(blob)))
+        else:
+            out.append(str(p))
+    return out
 
-    output = []
+# ----------  whitelist of transform steps ----------
+def CAPITALIZE() -> "Step[str, str]":
+    from src.step_engine import Step
+    return Step(str.capitalize)
 
-    for record in records:
-        if not isinstance(record, dict):
-            continue
+def CONCAT(sep: str = " ") -> "Step[list, str]":
+    from src.step_engine import Step
+    return Step(lambda pieces: sep.join(map(str, pieces)))
 
-        gst = record.get("gst_number")
-        if not isinstance(gst, str) or len(gst) < 12:
-            continue
+def join_parts(*parts: Any) -> "Step[Dict[str, Any], str]":
+    from src.step_engine import Step
+    return Step(lambda blob: "".join(
+        (p(blob) if callable(p) else str(p)) for p in parts
+    ))
 
-        state_code = gst[:2]
-        pan = gst[2:12]
+def SUBSTR(start: int, length: int) -> "Step[str, str]":
+    from src.step_engine import Step
+    return Step(lambda s: s[start : start + length])
 
-        state_name = GST_STATE_CODE_MAP.get(state_code, "")
+def GST_STATE_NAME() -> "Step[str, str]":
+    from src.step_engine import Step
+    return Step(
+        lambda gst: GST_STATE_CODE_MAP.get(gst[:2], "") if isinstance(gst, str) and len(gst) >= 2 else ""
+    )
 
-        output.append({
-            "gst_number": gst,
-            "pan_number": pan,
-            "state_name": state_name
-        })
+def GST_DETAILS_ALL() -> "Step[Any, List[Dict[str, str]]]":
+    from src.step_engine import Step
 
-    return output
+    def _impl(records: Any) -> List[Dict[str, str]]:
+        # normalise nested list from jsonpath
+        if records and isinstance(records[0], list):
+            records = records[0]
+        out: list[dict[str, str]] = []
+        for rec in records:
+            if not isinstance(rec, dict):
+                continue
+            gst = rec.get("gst_number")
+            if not isinstance(gst, str) or len(gst) < 12:
+                continue
+            state_code = gst[:2]
+            pan = gst[2:12]
+            out.append({"gst_number": gst, "pan_number": pan, "state_name": GST_STATE_CODE_MAP.get(state_code, "")})
+        return out
 
-
-def CONCATENATE(a: str, b: str) -> str:
-    return f"{a} {b}"
-
-
-def CAPITALIZE(a: str) -> str:
-    return a.capitalize()
-
-
-def JOIN(*args: str) -> str:
-    return "".join(args)
-
-
-def SUBSTR(value: str, start: int, length: int) -> str:
-    try:
-        return value[start:start + length]
-    except Exception:
-        return ""
-
-
-def GST_STATE_NAME(gstin: str) -> str:
-    if not gstin or len(gstin) < 2:
-        return ""
-    state_code = gstin[:2]
-    return GST_STATE_CODE_MAP.get(state_code, "")
-
-
-def CONCATENATE(a: str, b: str) -> str:
-    return f"{a} {b}"
-
-
-def CAPITALIZE(a: str) -> str:
-    return a.capitalize()
-
-
-def JOIN(*args: str) -> str:
-    return "".join(args)
-
-
-def SUBSTR(value: str, start: int, length: int) -> str:
-    try:
-        return value[start:start + length]
-    except Exception:
-        return ""
-
-
-def GST_STATE_NAME(gstin: str) -> str:
-    if not gstin or len(gstin) < 2:
-        return ""
-    state_code = gstin[:2]
-    return GST_STATE_CODE_MAP.get(state_code, "")
+    return Step(_impl)
