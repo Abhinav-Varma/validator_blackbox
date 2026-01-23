@@ -217,24 +217,7 @@ def REVERSE() -> "Step[str, str]":
     return Step(lambda s: s[::-1])
 ```
 
-### ② Export it (so it appears in autocomplete)
-
-Add `REVERSE` to the `__all__` list at the bottom of `function_pool.py`:
-
-```python
-__all__ = [
-    "CAPITALIZE",
-    "CONCAT",
-    "JOIN",
-    "join_parts",
-    "SUBSTR",
-    "GST_STATE_NAME",
-    "GST_DETAILS_ALL",
-    "REVERSE",   # <-- new
-]
-```
-
-### ③ Use in `rules.py`
+### ② Use in `rules.py`
 
 ```python
 from src.function_pool import REVERSE   # now auto-suggested by IDE
@@ -245,7 +228,7 @@ class PlayModel(TransformBaseModel):
     )
 ```
 
-### ④ Test quickly in a REPL
+### ③ Test quickly in a REPL
 
 ```python
 >>> from src.rules import PlayModel
