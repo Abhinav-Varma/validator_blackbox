@@ -275,24 +275,4 @@ step = (
     | GST_STATE_NAME()                  # returns string
 )
 ```
-## 7. Common pitfalls & how to avoid them
 
-| Symptom | Reason | Fix |
-|---------|--------|-----|
-| `TypeError: sequence item 0: expected str instance, Path found` | You passed a **list containing raw Path objects** to `JOIN`/`CONCAT`. | Use `join_parts()` or **resolve each path yourself** inside a lambda. |
-| `NameError: name 'print' is not defined` | You tried to use something **not imported from function_pool**. | Import only from `function_pool`; add new helpers there. Or use qualified imports (fp.CAPITALIZE)|
-| IDE shows `Any` for chain result | You forgot to **parameterise** the step or **return type hint**. | Add `-> "Step[In, Out]"` to your helper. |
-
----
-
-## 8. Cheatsheet (print & pin)
-
-```
-Chaining:          path("$.x") | CAPITALIZE() | CONCAT(" ")
-New helper:        def FOO() -> "Step[I, O]": return Step(fn)
-New model field:   my_field: str = Field(transform=path("$.json") | FOO())
-Security:          Only objects you import from function_pool exist – no eval.
-Performance:       AST cache already in place; bulk-extract later if needed.
-```
-
-Happy transforming!
