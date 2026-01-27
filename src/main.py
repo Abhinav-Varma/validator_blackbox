@@ -5,7 +5,7 @@ Demonstrates both instantiation styles:
 2. Model(**data)
 """
 import json
-from src.rules import NameModel, TravelSummaryModel, GSTAllModel
+from src.rules import NameModel, TravelSummaryModel, GSTAllModel, DefaultPreservationModel, CustomerVisaProfileModel
 
 
 def main() -> None:
@@ -15,6 +15,14 @@ def main() -> None:
 
     out = NameModel(**data)
     print("Output 1 – Full Name :", out.full_name)
+
+    out = NameModel.model_validate(
+        {
+            **data,
+            "full_name": "MANUAL OVERRIDE",
+        }
+    )
+    print("Output 1.1 – Full Name (Override check):", out.full_name)
 
     travel = TravelSummaryModel(**data)
     print("\nOutput 2 – Travel Summary:", travel.travel_summary)
@@ -27,6 +35,9 @@ def main() -> None:
         for record in gst.gst_outputs:
             print(" ", record)
 
+    m = DefaultPreservationModel.model_validate(data)
+    print("Country (Default Check):", m.country)
+
         
     # --- every normal Pydantic call works ---------------------------------
     m2 = NameModel.model_validate(data)           # explicit validator
@@ -35,6 +46,8 @@ def main() -> None:
     m5 = NameModel(**data)                        # kwargs expansion
     # ----------------------------------------------------------------------
 
-
+    extensivetest = CustomerVisaProfileModel(**data)
+    print(extensivetest.model_dump())
+    
 if __name__ == "__main__":
     main()

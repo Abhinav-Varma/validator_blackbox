@@ -6,7 +6,7 @@ from src.step_engine import Step
 def Field(
     *,
     default: Any = ...,
-    transform: Callable[[Step], Step] | None = None,
+    transform: Step[Dict[str, Any], Any] | None = None,
     **kwargs,
 ):
     return PydanticField(
@@ -25,36 +25,36 @@ class TransformBaseModel(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def _apply_transforms(cls, input_data: Any):
-        """
-        input_data is raw:
-        - dict
-        - JSON-decoded object
-        - positional dict (Model(data))
-        """
-
-        # Handle positional dict case: Model(data)
         if not isinstance(input_data, dict):
             return input_data
 
-        data = dict(input_data)  # shallow copy (important)
+        data = dict(input_data)
 
         for field_name, field_info in cls.model_fields.items():
+            if field_name in input_data:
+                continue
+
             extra = field_info.json_schema_extra or {}
             transform = extra.get("transform")
-
             if transform is None:
                 continue
 
-            try:
-                value = transform(input_data)
-            except Exception as e:
-                raise ValueError(
-                    f"Transform failed for field '{field_name}': {e}"
-                ) from e
-
-            data[field_name] = value
+            value = transform(input_data)
+            if value is not None:
+                data[field_name] = value
 
         return data
+
+    # dumping extras for security
+    @model_validator(mode="after")
+    def _strip_extras(self):
+        """
+        Permanently remove extra input data after validation.
+        This enforces output isolation.
+        """
+        if hasattr(self, "__pydantic_extra__"):
+            self.__pydantic_extra__.clear()
+        return self
 
     model_config = {
         "extra": "allow",

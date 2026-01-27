@@ -27,13 +27,16 @@ class Step(Generic[T, U]):
 # JSON-Path helper  (ONLY transform primitive defined here)
 # ------------------------------------------------------------------
 class Path(Step[Dict[str, Any], Any]):
+    __slots__ = ("_path", "_compiled")
+
     def __init__(self, jsonpath: str) -> None:
+        from jsonpath_ng import parse
         self._path = jsonpath
+        self._compiled = parse(jsonpath)
         super().__init__(self._resolve)
 
     def _resolve(self, blob: Dict[str, Any]) -> Any:
-        from jsonpath_ng import parse  # local import for fast start-up
-        matches = parse(self._path).find(blob)
+        matches = self._compiled.find(blob)
         if not matches:
             return None
         if len(matches) == 1:
