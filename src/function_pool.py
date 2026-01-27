@@ -11,18 +11,6 @@ import pathlib
 _GST_MAP_PATH = pathlib.Path(__file__).with_name("gstin_state_codes_india.json")
 GST_STATE_CODE_MAP: Dict[str, str] = json.loads(_GST_MAP_PATH.read_text())
 
-# ----------  helpers ----------
-def _resolve_parts(blob: Dict[str, Any], parts: list) -> list[str]:
-    """Resolve Path objects inside a list of mixed literals / paths."""
-    from src.step_engine import Path
-    out: list[str] = []
-    for p in parts:
-        if isinstance(p, Path):
-            out.append(str(p(blob)))
-        else:
-            out.append(str(p))
-    return out
-
 # ----------  whitelist of transform steps ----------
 def CAPITALIZE() -> "Step[str, str]":
     from src.step_engine import Step

@@ -5,7 +5,7 @@ Demonstrates both instantiation styles:
 2. Model(**data)
 """
 import json
-from src.rules import OutputModel, TravelSummaryModel, GSTAllModel
+from src.rules import NameModel, TravelSummaryModel, GSTAllModel
 
 
 def main() -> None:
@@ -13,19 +13,28 @@ def main() -> None:
     with open("sample.json", "r") as f:
         data = json.load(f)
 
-    gst1 = GSTAllModel.model_validate(data)
+    out = NameModel(**data)
+    print("Output 1 – Full Name :", out.full_name)
+
+    travel = TravelSummaryModel(**data)
+    print("\nOutput 2 – Travel Summary:", travel.travel_summary)
+
+    gst = GSTAllModel.model_validate(data)
     print("\nOutput 3 – All GST outputs:")
-    if not gst1.gst_outputs:
+    if not gst.gst_outputs:
         print("  (no GST records found)")
     else:
-        for record in gst1.gst_outputs:
+        for record in gst.gst_outputs:
             print(" ", record)
 
-    out2 = OutputModel(**data)
-    print("Output 1 – Full Name :", out2.full_name)
+        
+    # --- every normal Pydantic call works ---------------------------------
+    m2 = NameModel.model_validate(data)           # explicit validator
+    m3 = NameModel.model_validate_json(open("sample.json").read())  # string JSON
+    m4 = NameModel.model_validate(data, strict=True)  # strict mode
+    m5 = NameModel(**data)                        # kwargs expansion
+    # ----------------------------------------------------------------------
 
-    travel2 = TravelSummaryModel(**data)
-    print("\nOutput 2 – Travel Summary:", travel2.travel_summary)
 
 if __name__ == "__main__":
     main()

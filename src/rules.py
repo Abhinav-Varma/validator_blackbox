@@ -2,7 +2,9 @@
 All user-defined transformation models.
 New models are added here; they are instantly usable in main.py.
 """
-from typing import List, Dict
+from typing import List, Dict 
+from typing_extensions import Annotated
+from pydantic.types import StringConstraints
 from src.custom_basemodel import TransformBaseModel, Field
 from src.step_engine import path
 from src.function_pool import (  # whitelist only what you need
@@ -15,8 +17,12 @@ from src.function_pool import (  # whitelist only what you need
 # ------------------------------------------------------------------
 # Models
 # ------------------------------------------------------------------
-class OutputModel(TransformBaseModel):
-    full_name: str = Field(
+class NameModel(TransformBaseModel):
+    full_name: Annotated[
+        str,
+        #StringConstraints(max_length=10)
+        StringConstraints(min_length=10)
+    ] = Field(
         description="Full name of the customer",
         transform=join_parts(
             path("$..first_name") | SUBSTR(0,10) | CAPITALIZE(),
