@@ -35,7 +35,7 @@ class Path(Step[Dict[str, Any], Any]):
         from jsonpath_ng import parse  # local import for fast start-up
         matches = parse(self._path).find(blob)
         if not matches:
-            return ""
+            return None
         if len(matches) == 1:
             return matches[0].value
         return [m.value for m in matches]
