@@ -33,6 +33,17 @@ class NameModel(TransformBaseModel):
         ),
     )
 
+
+class NestedNameModel(TransformBaseModel):
+    nested_full_name: str = Field(
+        description="Full name using nested function-call style",
+        transform=join_parts(
+            CAPITALIZE(SUBSTR(0, 10, path("$..first_name"))),
+            " ",
+            CAPITALIZE(SUBSTR(0, 7, path("$..surname"))),
+        ),
+    )
+
 class TravelSummaryModel(TransformBaseModel):
     travel_summary: str = Field(
         description="Human readable travel summary",

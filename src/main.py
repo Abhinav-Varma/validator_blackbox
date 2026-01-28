@@ -5,7 +5,7 @@ Demonstrates both instantiation styles:
 2. Model(**data)
 """
 import json
-from src.rules import NameModel, TravelSummaryModel, GSTAllModel, DefaultPreservationModel, CustomerVisaProfileModel
+from src.rules import NameModel, NestedNameModel, TravelSummaryModel, GSTAllModel, DefaultPreservationModel, CustomerVisaProfileModel
 
 
 def main() -> None:
@@ -16,6 +16,9 @@ def main() -> None:
     out = NameModel(**data)
     print("Output 1 – Full Name :", out.full_name)
 
+    nested = NestedNameModel(**data)
+    print("Output 1.n – Nested Full Name:", nested.nested_full_name)
+
     out = NameModel.model_validate(
         {
             **data,
@@ -25,7 +28,7 @@ def main() -> None:
     print("Output 1.1 – Full Name (Override check):", out.full_name)
 
     travel = TravelSummaryModel(**data)
-    print("\nOutput 2 – Travel Summary:", travel.travel_summary)
+    #print("\nOutput 2 – Travel Summary:", travel.travel_summary)
 
     gst = GSTAllModel.model_validate(data)
     print("\nOutput 3 – All GST outputs:")
@@ -36,7 +39,7 @@ def main() -> None:
             print(" ", record)
 
     m = DefaultPreservationModel.model_validate(data)
-    print("Country (Default Check):", m.country)
+    #print("Country (Default Check):", m.country)
 
         
     # --- every normal Pydantic call works ---------------------------------

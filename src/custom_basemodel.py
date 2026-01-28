@@ -31,9 +31,9 @@ class TransformBaseModel(BaseModel):
         data = dict(input_data)
 
         for field_name, field_info in cls.model_fields.items():
-            if field_name in input_data:
-                continue
-
+            # Always attempt to run a transform if one is defined.
+            # Transforms now take precedence over any input-provided value
+            # by replacing the field when the transform returns non-None.
             extra = field_info.json_schema_extra or {}
             transform = extra.get("transform")
             if transform is None:
