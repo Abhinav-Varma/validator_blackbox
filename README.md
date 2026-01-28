@@ -14,22 +14,6 @@ A declarative Python framework for transforming raw JSON documents into validate
 - **Secure Execution**: Only whitelisted functions from `function_pool.py` are executable. No `eval` or unsafe dynamic code.
 - **Precedence Control**: Transformed values automatically override input data (when successful), ensuring your business rules always apply.
 - **JSONPath Integration**: Built-in support for extracting data deep within complex JSON structures.
-
----
-
-## 📦 Installation
-
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/your-org/validator_blackbox.git
-   cd validator_blackbox
-   ```
-
-2. **Install dependencies** (virtual environment recommended):
-   ```bash
-   pip install -r requirements.txt
-   ```
-
 ---
 
 ## 🛠️ Usage
@@ -134,6 +118,15 @@ python tests/test.py
 - **Missing Fields**: Verifying that required fields are flagged if transforms fail.
 - **Type Safety**: Checking that transformed outputs match field types (e.g., `str` to `int`).
 - **Defaults**: Ensuring default values are applied when paths are missing.
+
+**Run precedence check:**
+```bash
+python tests/override_test.py
+```
+
+`tests/override_test.py` covers:
+- **Precedence Logic**: Demonstrates that transformed values explicitly override manually provided input values.
+- **Verification**: Outputs both the manual input and the transformed result to prove the transform engine's authority.
 
 ---
 
