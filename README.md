@@ -78,12 +78,13 @@ The system processes data in a strictly defined pipeline to ensure consistency.
 
 ```mermaid
 flowchart LR
-    raw[Raw JSON Input] --> transform_eng[Step Engine]
+    raw[Raw JSON Input] --> transform_init[TransformBaseModel Init]
     
     subgraph Transformation Phase
-        transform_eng --> paths[Execute path() Lookups]
-        paths --> steps[Apply Transforms pipe/nested]
-        steps --> merge[Merge & Override Input]
+        transform_init --> engine[Step Engine Execution]
+        engine --> paths[Execute path() Lookups]
+        paths --> steps[Apply Transforms (pipe/nested)]
+        steps --> merge[Merge & Override Input Data]
     end
     
     merge --> validation[Pydantic Validation]
@@ -91,7 +92,7 @@ flowchart LR
     
     types --> output[Final Validated Model]
     
-    style transform_eng put:fill:#f9f,stroke:#333
+    style transform_init fill:#f9f,stroke:#333
     style output fill:#9f9,stroke:#333
 ```
 
@@ -193,15 +194,16 @@ India → Taiwan (01-Mar-2026 to 07-Mar-2026)
 ```
 
 **Transformation Logic**
-This demonstrates the **nested-call syntax**. It extracts the first 10 characters of the first name, capitalizes them, does the same for the first 7 characters of the surname, and joins them.
+This example uses the `NestedNameModel` to demonstrate the **nested-call syntax**. It extracts the first 10 characters of the first name, capitalizes them, does the same for the first 7 characters of the surname, and joins them.
 ```python
-Field(
-    transform=join_parts(
-        CAPITALIZE(SUBSTR(0, 10, path("$..first_name"))),
-        " ",
-        CAPITALIZE(SUBSTR(0, 7, path("$..surname"))),
+class NestedNameModel(TransformBaseModel):
+    nested_full_name: str = Field(
+        transform=join_parts(
+            CAPITALIZE(SUBSTR(0, 10, path("$..first_name"))),
+            " ",
+            CAPITALIZE(SUBSTR(0, 7, path("$..surname"))),
+        )
     )
-)
 ```
 
 **Resulting Output**
