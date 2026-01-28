@@ -1,6 +1,6 @@
 # Validator Blackbox
 
-A robust, declarative Python framework for transforming raw JSON documents into validated, structured Pydantic models.
+A declarative Python framework for transforming raw JSON documents into validated, structured Pydantic models.
 
 **Validator Blackbox** decouples transformation logic from validation rules. Instead of writing imperative parsing code, you declare **how** each field is derived using a composable set of typed "Steps". The framework handles execution, precedence, and safety—letting you focus on the business logic.
 
@@ -78,22 +78,18 @@ The system processes data in a strictly defined pipeline to ensure consistency.
 
 ```mermaid
 flowchart LR
-    raw[Raw JSON Input] --> transform_init[TransformBaseModel Init]
-    
-    subgraph Transformation Phase
-        transform_init --> engine[Step Engine Execution]
-        engine --> paths[Execute path() Lookups]
-        paths --> steps[Apply Transforms (pipe/nested)]
-        steps --> merge[Merge & Override Input Data]
+    raw["Raw JSON Input"] --> transform_init["TransformBaseModel Initialization"]
+
+    subgraph "Transformation Phase"
+        direction LR
+        transform_init --> steps["Execute Field Transform Pipelines"]
+        steps --> merge["Populate Derived Field Values"]
     end
-    
-    merge --> validation[Pydantic Validation]
-    validation --> types[Type Coercion & Checks]
-    
-    types --> output[Final Validated Model]
-    
-    style transform_init fill:#f9f,stroke:#333
-    style output fill:#9f9,stroke:#333
+
+    merge --> validation["Pydantic Validation"]
+    validation --> output["Validated Model Instance"]
+
+
 ```
 
 ---
@@ -112,7 +108,7 @@ validator_blackbox/
 │   └── gstin_state_codes_india.json # Reference data
 ├── tests/
 │   ├── test.py              # Primary transformation unit tests
-│   └── override_test.py     # Tests for validation logic
+│   └── override_test.py     # Tests for preference of transformed data to overriden inputs
 ├── sample.json              # Complex sample input data
 └── requirements.txt         # Dependencies (pydantic, jsonpath-ng)
 ```
@@ -126,7 +122,7 @@ validator_blackbox/
 
 ## 🧪 Testing
 
-The project includes a test suite to ensure transformations and validation logic work as expected.
+The project includes 2 tests, one for unit tests and the other to demonstrate preference of transformated data to manual override inputs.
 
 **Run tests:**
 ```bash
