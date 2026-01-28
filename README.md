@@ -1,278 +1,254 @@
-# Python-JSON Transformer
+# Validator Blackbox
 
-**Audience:** you want to add new transformation functions, understand how the engine chains them, and build new `OutputModel`s without surprises.
+A robust, declarative Python framework for transforming raw JSON documents into validated, structured Pydantic models.
 
----
-
-## 1. 30-second recap
-
-- You **never write imperative code** to transform JSON.  
-- You **declare** how each field is computed by chaining **typed Step objects**.  
-- Only functions **explicitly exported** from `function_pool.py` can be used – no `eval`, no `exec`, no escape hatches.  
-- The DSL is **pure Python**, so **autocomplete**, **type-checking**, and **refactor** work out of the box.
+**Validator Blackbox** decouples transformation logic from validation rules. Instead of writing imperative parsing code, you declare **how** each field is derived using a composable set of typed "Steps". The framework handles execution, precedence, and safety—letting you focus on the business logic.
 
 ---
 
-## 2. File map & responsibility
+## 🚀 Key Features
 
-| File | Responsibility |
-|------|----------------|
-| `main.py` | **Runner**. Imports models from `rules.py`, loads JSON, prints results. *Never edited after scaffolding.* |
-| `rules.py` | **User catalogue**. All `TransformBaseModel` subclasses live here. You add new models / fields here only. |
-| `custom_basemodel.py` | **Pydantic glue**. Gives you `Field(..., transform=Step)` and the automatic execution hook. *Rarely touched.* |
-| `step_engine.py` | **Micro-kernel**. Defines `Step`, `|`, and **only** `path(...)`. *Never contains business logic.* |
-| `function_pool.py` | **Function supermarket**. Every transformation primitive you can use. *This is where you commit new code.* |
-
----
-
-## 3. `step_engine.py` – line-by-line walk-through
-
-```python
-from __future__ import annotations
-from typing import TypeVar, Callable, Any, Dict, Generic
-```
-- Future import lets us use lowercase generics (`Step[Dict[str, Any], str]`) inside the same file.  
-- `Generic[T, U]` is the trick that gives **static type inference** for every transformation.
+- **Declarative Configuration**: Define transformations inline with your Pydantic model fields using `Field(transform=...)`.
+- **Flexible Composition**: Support for both **Pipe-Style** (`path(...) | OP`) and **Nested-Call** (`OP(path(...))`) syntax.
+- **Type-Safe Transformation**: Every step is typed (`Step[T, U]`), ensuring clarity and editor support.
+- **Secure Execution**: Only whitelisted functions from `function_pool.py` are executable. No `eval` or unsafe dynamic code.
+- **Precedence Control**: Transformed values automatically override input data (when successful), ensuring your business rules always apply.
+- **JSONPath Integration**: Built-in support for extracting data deep within complex JSON structures.
 
 ---
 
-```python
-T = TypeVar("T")
-U = TypeVar("U")
-V = TypeVar("V")
-```
-- One type-var per **position** in the chain:  
-  `Step[T, U]` means “input type T, output type U”.
+## 📦 Installation
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/your-org/validator_blackbox.git
+   cd validator_blackbox
+   ```
+
+2. **Install dependencies** (virtual environment recommended):
+   ```bash
+   pip install -r requirements.txt
+   ```
 
 ---
 
-```python
-class Step(Generic[T, U]):
-    __slots__ = ("_fn",)
+## 🛠️ Usage
 
-    def __init__(self, fn: Callable[[T], U]) -> None:
-        self._fn = fn
-```
-- `Step` is **just a boxed function**.  
-- `__slots__` keeps instances tiny (no per-instance `__dict__`).
+### 1. Define your Transformations
+Usage is centered around `rules.py`. Import helpers from the `function_pool` and assign them to `transform` in your model fields.
 
----
-
-```python
-    def __call__(self, value: T) -> U:
-        return self._fn(value)
-```
-- Makes the object **callable like a plain function** – important for the final execution inside `TransformBaseModel`.
-
----
-
-```python
-    def __or__(self, other: Step[U, V]) -> Step[T, V]:
-        return Step(lambda v: other(self(v)))
-```
-- **Composition operator**.  
-  `a | b` produces a **new** Step that first runs `a`, then feeds the result into `b`.  
-  Because the lambda closes over `self` and `other`, **no new syntax** is required – it is still **pure Python**.
-
----
-
-```python
-class Path(Step[Dict[str, Any], Any]):
-    def __init__(self, jsonpath: str) -> None:
-        self._path = jsonpath
-        super().__init__(self._resolve)
-```
-- `Path` **is-a** `Step` – therefore it can live on either side of `|`.  
-- We **delay** the actual JSON-Path library import until **runtime** to keep start-up fast.
-
----
-
-```python
-    def _resolve(self, blob: Dict[str, Any]) -> Any:
-        from jsonpath_ng import parse
-        matches = parse(self._path).find(blob)
-        if not matches:
-            return ""          # legacy compatibility
-        if len(matches) == 1:
-            return matches[0].value
-        return [m.value for m in matches]
-```
-- **Single walk** per path **per document**.  
-- Returns **scalar** when only one hit, **list** otherwise – mimics `jsonpath_ng` default.
-
----
-
-```python
-path = Path  # convenience alias
-```
-- Lets users write `path("$.foo")` instead of `Path("$.foo")`.
-
----
-
-That is **literally the whole kernel** – < 50 LOC, no magic, no exec.
-
----
-
-## 4. Function pool catalogue – exhaustive examples
-
-Every function **returns** a `Step[In, Out]` so it can be chained.
-
-### 1. `CAPITALIZE` – simplest unary step
-```python
-from src.function_pool import CAPITALIZE
-step = path("$.name") | CAPITALIZE()
-assert step({"name": "alice"}) == "Alice"
-```
-
-### 2. `CONCAT` – configurable separator
-```python
-from src.function_pool import CONCAT
-step = CONCAT(" - ")([path("$.a"), path("$.b")])
-assert step({"a": "A", "b": "B"}) == "A - B"
-```
-
-### 3. `JOIN` – glue a list of strings
-```python
-from src.function_pool import JOIN
-step = JOIN()(["foo", "bar"])
-assert step({}) == "foobar"
-```
-
-### 4. `SUBSTR` – slice with bounds check
-```python
-from src.function_pool import SUBSTR
-step = SUBSTR(0, 3)
-assert step("abcdef") == "abc"
-```
-
-### 5. `GST_STATE_NAME` – dictionary lookup
-```python
-from src.function_pool import GST_STATE_NAME
-step = path("$.gstin") | GST_STATE_NAME()
-assert step({"gstin": "27AABCU9603R1ZX"}) == "Maharashtra"
-```
-
-### 6. `GST_DETAILS_ALL` – list-in, list-out
-```python
-from src.function_pool import GST_DETAILS_ALL
-step = path("$.gst_records") | GST_DETAILS_ALL()
-data = {"gst_records": [{"gst_number": "27AABCU9603R1ZX"}]}
-assert step(data) == [{"gst_number": "27AABCU9603R1ZX", "pan_number": "AABCU9603R", "state_name": "Maharashtra"}]
-```
-
-### 7. `join_parts` – mixed literals + paths (high-level helper)
-```python
-from src.function_pool import join_parts
-step = join_parts(
-    path("$.first_name") | CAPITALIZE(),
-    " ",
-    path("$.last_name") | CAPITALIZE(),
-)
-assert step({"first_name": "john", "last_name": "doe"}) == "John Doe"
-```
-
----
-
-## 5. Combining many steps – real model snippet
-
+**Pipe Style** (Left-to-Right reading flow):
 ```python
 from src.rules import TransformBaseModel, Field
 from src.step_engine import path
-from src.function_pool import CAPITALIZE, join_parts, GST_DETAILS_ALL, SUBSTR
+from src.function_pool import CAPITALIZE, SUBSTR
 
-class CustomerModel(TransformBaseModel):
+class UserProfile(TransformBaseModel):
+    # Extract 'name', take first 10 chars, then capitalize
     display_name: str = Field(
-        transform=join_parts(
-            path("$.first_name") | CAPITALIZE(),
-            " ",
-            path("$.last_name") | CAPITALIZE(),
-        )
+        transform=path("$.user.name") | SUBSTR(0, 10) | CAPITALIZE()
     )
+```
 
-    initials: str = Field(
-        transform=join_parts(
-            path("$.first_name") | SUBSTR(0, 1) | CAPITALIZE(),
-            ".",
-            path("$.last_name") | SUBSTR(0, 1) | CAPITALIZE(),
-            ".",
-        )
+**Nested-Call Style** (Functional reading flow):
+```python
+class UserProfile(TransformBaseModel):
+    # Same logic, written functionally
+    display_name: str = Field(
+        transform=CAPITALIZE(SUBSTR(0, 10, path("$.user.name")))
     )
+```
 
-    gst_info: list[dict[str, str]] = Field(
-        transform=path("$.gst_list") | GST_DETAILS_ALL()
-    )
+### 2. Run the Validator
+Use the model just like any Pydantic model. The transforms run **before** validation.
+
+```python
+data = {"user": {"name": "alice_wonderland"}}
+model = UserProfile(**data)
+
+print(model.display_name)
+# Output: "Alice_wond"
 ```
 
 ---
 
-## 6. Step-by-step: adding a brand-new function
+## 📊 Process Flow
 
-**Goal:** create `REVERSE()` that reverses a string.
+The system processes data in a strictly defined pipeline to ensure consistency.
 
-### ① Implement the logic in `function_pool.py`
-
-```python
-def REVERSE() -> "Step[str, str]":
-    from src.step_engine import Step
-    return Step(lambda s: s[::-1])
+```mermaid
+flowchart LR
+    raw[Raw JSON Input] --> transform_eng[Step Engine]
+    
+    subgraph Transformation Phase
+        transform_eng --> paths[Execute path() Lookups]
+        paths --> steps[Apply Transforms pipe/nested]
+        steps --> merge[Merge & Override Input]
+    end
+    
+    merge --> validation[Pydantic Validation]
+    validation --> types[Type Coercion & Checks]
+    
+    types --> output[Final Validated Model]
+    
+    style transform_eng put:fill:#f9f,stroke:#333
+    style output fill:#9f9,stroke:#333
 ```
-
-### ② Use in `rules.py`
-
-```python
-from src.function_pool import REVERSE   # now auto-suggested by IDE
-
-class PlayModel(TransformBaseModel):
-    backwards: str = Field(
-        transform=path("$.word") | REVERSE()
-    )
-```
-
-### ③ Test quickly in a REPL
-
-```python
->>> from src.rules import PlayModel
->>> PlayModel(json_data={"word": "stressed"}).backwards
-'desserts'
-```
-
-That is **literally all that is required** – no kernel change, no registration call, no AST whitelist update.
 
 ---
-### Multipart Commands
 
-A Step is unary by definition: Step[T, U] = one input → one output.
-#### Method 1
-We will need to create a blob of the type of input required for the output in order for the helper to ingest as follows
+## 📂 Project Structure
 
-Helper:
+```text
+validator_blackbox/
+├── src/
+│   ├── main.py              # Entry point runner
+│   ├── rules.py             # User-defined Models & Transform definitions
+│   ├── function_pool.py     # Registry of allowed Transform functions (User logic goes here)
+│   ├── step_engine.py       # Core Engine (Step, Pipe logic)
+│   ├── custom_basemodel.py  # Pydantic base integration
+│   ├── custom_types.py      # Custom strict types (Passport check, etc.)
+│   └── gstin_state_codes_india.json # Reference data
+├── tests/
+│   ├── test.py              # Primary transformation unit tests
+│   └── override_test.py     # Tests for validation logic
+├── sample.json              # Complex sample input data
+└── requirements.txt         # Dependencies (pydantic, jsonpath-ng)
+```
+
+**Key Files:**
+- `rules.py`: This is where you work. Define your Pydantic models here.
+- `function_pool.py`: Extensions go here. Add new transformation functions (like `REVERSE`, `LOOKUP`, etc.).
+- `main.py`: A runner script to demonstrate the system in action.
+
+---
+
+## 🧪 Testing
+
+The project includes a test suite to ensure transformations and validation logic work as expected.
+
+**Run tests:**
+```bash
+python tests/test.py
+```
+
+`tests/test.py` covers:
+- **Transform Order**: Ensuring transforms happen before type checks.
+- **Missing Fields**: Verifying that required fields are flagged if transforms fail.
+- **Type Safety**: Checking that transformed outputs match field types (e.g., `str` to `int`).
+- **Defaults**: Ensuring default values are applied when paths are missing.
+
+---
+
+## 🧪 Detailed Sample Input & Output
+
+The following example is available in `src/rules.py` as `TravelSummaryModel`.
+
+**Input (`sample.json` snippet)**
+```json
+{
+  "visa_request_information": {
+    "visa_request": {
+      "from_country_full_name": "India",
+      "to_country_full_name": "Taiwan",
+      "departure_date_formatted": "01-Mar-2026",
+      "arrival_date_formatted": "07-Mar-2026"
+    }
+  }
+}
+```
+
+**Transformation Logic**
+The goal is to create a human-readable summary string from multiple nested fields.
 ```python
-def function(...Can be any variable it needs to take...) -> Step[List/Dict/etc.[Any], str]:
-    return Step(lambda blob: function(blob)
+Field(
+    transform=join_parts(
+        path("$.visa_request_information..from_country_full_name"),
+        " → ",
+        path("$.visa_request_information..to_country_full_name"),
+        " (",
+        path("$.visa_request_information..departure_date_formatted"),
+        " to ",
+        path("$.visa_request_information..arrival_date_formatted"),
+        ")"
     )
-```
-
-Usage:
-```python
-# build the container with pure Python, then pipe
-transform = (
-    lambda blob: [path("$..a")(blob), path("$..b")(blob), "literal",...]
-) | function()
-```
-#### Method 2
-Pass multiple values into the function itself and create the blob* in the helper. Look at join_parts() for example.
-
-*depends on usage
-#### Multipart Outputs
-When a Step must return several independent pieces (a tuple, dict, list, named tuple, dataclass, etc.) you simply let the Step emit that object – the next Step in the chain must expect that shape as its input type.
-
-Next Step can pick what it needs:
-```python
-step = (
-    path("$.gst_number")
-    | EXTRACT_GST_COMPONENTS()
-    | Step(lambda d: d["state_code"])   # only state code
-    | GST_STATE_NAME()                  # returns string
 )
 ```
 
+**Resulting Output**
+```text
+India → Taiwan (01-Mar-2026 to 07-Mar-2026)
+```
+
+### Nested Transformation Example (Name Composition)
+
+**Input**
+```json
+{
+  "passport": {
+      "first_name": "PAULSTALIN JOONIS EVANS",
+      "surname": "GODFREY PREM KIRUBA SEKAR"
+  }
+}
+```
+
+**Transformation Logic**
+This demonstrates the **nested-call syntax**. It extracts the first 10 characters of the first name, capitalizes them, does the same for the first 7 characters of the surname, and joins them.
+```python
+Field(
+    transform=join_parts(
+        CAPITALIZE(SUBSTR(0, 10, path("$..first_name"))),
+        " ",
+        CAPITALIZE(SUBSTR(0, 7, path("$..surname"))),
+    )
+)
+```
+
+**Resulting Output**
+```text
+Paulstalin Godfrey
+```
+
+### GST Output Example
+
+**Input**
+```json
+{
+  "gst_records": [
+    { "gst_number": "29ABCDE1234F1Z5" },
+    { "gst_number": "27PQRSX5678L1Z3" }
+  ]
+}
+```
+
+**Transformation Logic**
+Extracts GST number, derives PAN (chars 3-12), and looks up State Name based on the first 2 digits.
+```python
+Field(
+    transform=path("$.gst_records") | GST_DETAILS_ALL()
+)
+```
+
+**Resulting Output**
+```python
+[
+  {'gst_number': '29ABCDE1234F1Z5', 'pan_number': 'ABCDE1234F', 'state_name': 'Karnataka'},
+  {'gst_number': '27PQRSX5678L1Z3', 'pan_number': 'PQRSX5678L', 'state_name': 'Maharashtra'}
+]
+```
+
+---
+
+## Important Notes
+
+1. **Precedence**: By default, **Transforms override Input**.
+   - If a transform returns a value (not `None`), it replaces the value in the input dictionary.
+   - If you want Pydantic defaults to apply, your transform must return `None`.
+
+2. **Extending**: To add new logic (e.g., `REVERSE`), edit `src/function_pool.py`.
+   - Always return a `Step`.
+   - Use the factory pattern if you want to support both nested and pipe usage (see `CAPITALIZE` implementation).
+
+3. **Performance**: JSONPath lookups are done at runtime. For extremely high-throughput paths, ensure your JSONPaths are specific to avoid full-document scans.
+
+---
