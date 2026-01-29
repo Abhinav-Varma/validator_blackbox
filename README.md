@@ -62,17 +62,16 @@ The system processes data in a strictly defined pipeline to ensure consistency.
 
 ```mermaid
 flowchart LR
-    raw["Raw JSON Input"] --> transform_init["TransformBaseModel Initialization"]
+    raw["Raw JSON Input"] --> transform_init["BaseModel Initialization"]
+    transform_init --> steps
 
     subgraph "Transformation Phase"
         direction LR
-        transform_init --> steps["Execute Field Transform Pipelines"]
-        steps --> merge["Populate Derived Field Values"]
+        steps["Execute Field Transform Pipelines"] --> merge["Populate Derived Field Values"]
     end
 
     merge --> validation["Pydantic Validation"]
     validation --> output["Validated Model Instance"]
-
 
 ```
 
@@ -101,33 +100,7 @@ validator_blackbox/
 - `rules.py`: This is where you work. Define your Pydantic models here.
 - `function_pool.py`: Extensions go here. Add new transformation functions (like `REVERSE`, `LOOKUP`, etc.).
 - `main.py`: A runner script to demonstrate the system in action.
-
----
-
-## 🧪 Testing
-
-The project includes 2 tests, one for unit tests and the other to demonstrate preference of transformated data to manual override inputs.
-
-**Run tests:**
-```bash
-python tests/test.py
-```
-
-`tests/test.py` covers:
-- **Transform Order**: Ensuring transforms happen before type checks.
-- **Missing Fields**: Verifying that required fields are flagged if transforms fail.
-- **Type Safety**: Checking that transformed outputs match field types (e.g., `str` to `int`).
-- **Defaults**: Ensuring default values are applied when paths are missing.
-
-**Run precedence check:**
-```bash
-python tests/override_test.py
-```
-
-`tests/override_test.py` covers:
-- **Precedence Logic**: Demonstrates that transformed values explicitly override manually provided input values.
-- **Verification**: Outputs both the manual input and the transformed result to prove the transform engine's authority.
-
+- `custom_basemodel.py`: Defines the Pydantic model for transformation.
 ---
 
 ## 🧪 Detailed Sample Input & Output
@@ -227,19 +200,5 @@ Field(
   {'gst_number': '27PQRSX5678L1Z3', 'pan_number': 'PQRSX5678L', 'state_name': 'Maharashtra'}
 ]
 ```
-
----
-
-## Important Notes
-
-1. **Precedence**: By default, **Transforms override Input**.
-   - If a transform returns a value (not `None`), it replaces the value in the input dictionary.
-   - If you want Pydantic defaults to apply, your transform must return `None`.
-
-2. **Extending**: To add new logic (e.g., `REVERSE`), edit `src/function_pool.py`.
-   - Always return a `Step`.
-   - Use the factory pattern if you want to support both nested and pipe usage (see `CAPITALIZE` implementation).
-
-3. **Performance**: JSONPath lookups are done at runtime. For extremely high-throughput paths, ensure your JSONPaths are specific to avoid full-document scans.
 
 ---
