@@ -50,7 +50,7 @@ def main() -> None:
     # ----------------------------------------------------------------------
 
     extensivetest = CustomerVisaProfileModel(**data)
-    print(extensivetest.model_dump())
+    print(extensivetest.model_dump_json(indent=2))
     
 if __name__ == "__main__":
     main()

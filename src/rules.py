@@ -13,7 +13,6 @@ from src.function_pool import (  # whitelist only what you need
     join_parts,
     GST_DETAILS_ALL,
     SUBSTR,
-    JOIN
 )
 
 # ------------------------------------------------------------------
