@@ -6,8 +6,7 @@ from typing_extensions import Annotated
 from pydantic.types import StringConstraints
 
 from src.custom_basemodel import TransformBaseModel, Field
-from src.step_engine import path
-from src.function_pool import CAPITALIZE, SUBSTR, join_parts, GST_DETAILS_ALL
+from src.function_pool import path, CAPITALIZE, SUBSTR, join_parts, GST_DETAILS_ALL
 from src.custom_types import NonEmptyStr, PassportNumber
 
 
@@ -20,9 +19,9 @@ class CustomerNameModel(TransformBaseModel):
     ] = Field(
         description="Full name using pipeline style transforms",
         transform=join_parts(
-            path("$..first_name") | SUBSTR(0,10) | CAPITALIZE(),
+            CAPITALIZE(SUBSTR(path("$..first_name"), 0, 10)),
             " ",
-            path("$..surname") | CAPITALIZE() | SUBSTR(0,7),
+            SUBSTR(CAPITALIZE(path("$..surname")), 0, 7),
         ),
     )
 
@@ -30,9 +29,9 @@ class CustomerNameModel(TransformBaseModel):
     display_name: str = Field(
         description="Display name using nested function-call style",
         transform=join_parts(
-            CAPITALIZE(SUBSTR(0, 10, path("$..first_name"))),
+            CAPITALIZE(SUBSTR(path("$..first_name"), 0, 10)),
             " ",
-            CAPITALIZE(SUBSTR(0, 7, path("$..surname"))),
+            CAPITALIZE(SUBSTR(path("$..surname"), 0, 7)),
         ),
     )
 
@@ -65,7 +64,7 @@ class CustomerProfileModel(TransformBaseModel):
     """Model demonstrating custom types and list processing"""
     # Custom type with validation (PassportNumber)
     passport_number: PassportNumber = Field(
-        transform=path("$..passport_number") | SUBSTR(0, 9),
+        transform=SUBSTR(path("$..passport_number"), 0, 9),
     )
 
     # Literal type validation
@@ -77,14 +76,14 @@ class CustomerProfileModel(TransformBaseModel):
     customer_name: NonEmptyStr = Field(
         description="Customer name using NonEmptyStr type",
         transform=join_parts(
-            path("$..first_name") | CAPITALIZE(),
+            CAPITALIZE(path("$..first_name")),
             " ",
-            path("$..surname") | CAPITALIZE(),
+            CAPITALIZE(path("$..surname")),
         ),
     )
 
     # GST list processing with default
     gst_outputs: List[Dict[str, str]] = Field(
         default=[],
-        transform=path("$.gst_records") | GST_DETAILS_ALL(),
+        transform=GST_DETAILS_ALL(path("$.gst_records")),
     )

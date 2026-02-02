@@ -1,12 +1,12 @@
 # src/custom_basemodel.py
 from pydantic import Field as PydanticField, BaseModel, model_validator
 from typing import Any, Callable, Dict
-from src.step_engine import Step
+from src.custom_types import Expr
 
 def Field(
     *,
     default: Any = ...,
-    transform: Step[Dict[str, Any], Any] | None = None,
+    transform: Expr | None = None,
     **kwargs,
 ):
     return PydanticField(
