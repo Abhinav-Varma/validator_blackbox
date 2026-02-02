@@ -5,52 +5,55 @@ Demonstrates both instantiation styles:
 2. Model(**data)
 """
 import json
-from src.rules import NameModel, NestedNameModel, TravelSummaryModel, GSTAllModel, DefaultPreservationModel, CustomerVisaProfileModel
+from src.rules import CustomerNameModel, TravelInfoModel, CustomerProfileModel
 
 
 def main() -> None:
-
     with open("sample.json", "r") as f:
         data = json.load(f)
 
-    out = NameModel(**data)
-    print("Output 1 – Full Name :", out.full_name)
+    # CustomerNameModel - pipeline and nested function-call styles
+    name_model = CustomerNameModel(**data)
+    print("CustomerNameModel Output:")
+    print(name_model.model_dump_json(indent=2))
+    print()
 
-    nested = NestedNameModel(**data)
-    print("Output 1.n – Nested Full Name:", nested.nested_full_name)
+    # TravelInfoModel - complex paths and defaults
+    travel_model = TravelInfoModel(**data)
+    print("TravelInfoModel Output:")
+    print(travel_model.model_dump_json(indent=2))
+    print()
 
-    out = NameModel.model_validate(
-        {
-            **data,
-            "full_name": "MANUAL OVERRIDE",
-        }
-    )
-    print("Output 1.1 – Full Name (Override check):", out.full_name)
+    # CustomerProfileModel - custom types and list processing
+    profile_model = CustomerProfileModel(**data)
+    print("CustomerProfileModel Output:")
+    print(profile_model.model_dump_json(indent=2))
+    print()
 
-    travel = TravelSummaryModel(**data)
-    #print("\nOutput 2 – Travel Summary:", travel.travel_summary)
+    # Demonstrate transform override behavior
+    print("Override Behavior Test:")
+    overridden = CustomerNameModel.model_validate({**data, "full_name": "MANUAL OVERRIDE"})
+    print(json.dumps({
+        "input": "MANUAL OVERRIDE",
+        "output": overridden.full_name,
+        "transform_overrides_input": overridden.full_name != "MANUAL OVERRIDE"
+    }, indent=2))
+    print()
 
-    gst = GSTAllModel.model_validate(data)
-    print("\nOutput 3 – All GST outputs:")
-    if not gst.gst_outputs:
-        print("  (no GST records found)")
-    else:
-        for record in gst.gst_outputs:
-            print(" ", record)
+    # Demonstrate various Pydantic instantiation styles
+    print("Instantiation Styles Test:")
+    m1 = CustomerNameModel.model_validate(data)
+    m2 = CustomerNameModel.model_validate_json(open("sample.json").read())
+    m3 = CustomerNameModel.model_validate(data, strict=True)
+    m4 = CustomerNameModel(**data)
+    print(json.dumps({
+        "model_validate": m1.full_name,
+        "model_validate_json": m2.full_name,
+        "strict_mode": m3.full_name,
+        "kwargs": m4.full_name,
+        "all_match": m1.full_name == m2.full_name == m3.full_name == m4.full_name
+    }, indent=2))
 
-    m = DefaultPreservationModel.model_validate(data)
-    #print("Country (Default Check):", m.country)
 
-        
-    # --- every normal Pydantic call works ---------------------------------
-    m2 = NameModel.model_validate(data)           # explicit validator
-    m3 = NameModel.model_validate_json(open("sample.json").read())  # string JSON
-    m4 = NameModel.model_validate(data, strict=True)  # strict mode
-    m5 = NameModel(**data)                        # kwargs expansion
-    # ----------------------------------------------------------------------
-
-    extensivetest = CustomerVisaProfileModel(**data)
-    print(extensivetest.model_dump_json(indent=2))
-    
 if __name__ == "__main__":
     main()
