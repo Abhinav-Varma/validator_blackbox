@@ -8,9 +8,6 @@ from decimal import Decimal
 import json
 import pathlib
 
-<<<<<<< Updated upstream
-# ----------  shared data ----------
-=======
 from src.step_engine import Step
 from src.jsonlogic_engine import jsonLogic
 
@@ -19,14 +16,18 @@ from src.jsonlogic_engine import jsonLogic
 # Shared data
 # --------------------------------------------------
 
->>>>>>> Stashed changes
 _GST_MAP_PATH = pathlib.Path(__file__).with_name("gstin_state_codes_india.json")
 GST_STATE_CODE_MAP: Dict[str, str] = json.loads(_GST_MAP_PATH.read_text())
 
-# ----------  helpers ----------
+
+# --------------------------------------------------
+# Internal helpers
+# --------------------------------------------------
+
 def _resolve_parts(blob: Dict[str, Any], parts: list) -> list[str]:
     """Resolve Path objects inside a list of mixed literals / paths."""
     from src.step_engine import Path
+
     out: list[str] = []
     for p in parts:
         if isinstance(p, Path):
@@ -35,51 +36,30 @@ def _resolve_parts(blob: Dict[str, Any], parts: list) -> list[str]:
             out.append(str(p))
     return out
 
-<<<<<<< Updated upstream
-# ----------  whitelist of transform steps ----------
-def CAPITALIZE() -> "Step[str, str]":
-    from src.step_engine import Step
-    return Step(str.capitalize)
-=======
+
 # --------------------------------------------------
 # String / list transforms
 # --------------------------------------------------
 
 def CAPITALIZE(source=None) -> "Step[Any, str]":
-    # Delegate to jsonlogic-style operator implementation
     def _cap(v):
         return op_capitalize(v)
->>>>>>> Stashed changes
+
+    if source is None:
+        return Step(_cap)
+    if callable(source):
+        return Step(lambda blob: _cap(source(blob)))
+    return Step(lambda _: _cap(source))
+
 
 def CONCAT(sep: str = " ") -> "Step[list, str]":
-    from src.step_engine import Step
     return Step(lambda pieces: sep.join(map(str, pieces)))
 
+
 def JOIN() -> "Step[list, str]":
-    from src.step_engine import Step
     return Step("".join)
 
-<<<<<<< Updated upstream
-def SPLIT(sep: str = " ") -> "Step[str, tuple[str, ...]]":
-    from src.step_engine import Step
-    return Step(lambda s: tuple(s.split(sep)))
 
-def join_parts(*parts: Any) -> "Step[Dict[str, Any], str]":
-    from src.step_engine import Step
-    return Step(lambda blob: "".join(
-        (p(blob) if callable(p) else str(p)) for p in parts
-    ))
-
-def SUBSTR(start: int, length: int) -> "Step[str, str]":
-    from src.step_engine import Step
-    return Step(lambda s: s[start : start + length])
-
-def GST_STATE_NAME() -> "Step[str, str]":
-    from src.step_engine import Step
-    return Step(
-        lambda gst: GST_STATE_CODE_MAP.get(gst[:2], "") if isinstance(gst, str) and len(gst) >= 2 else ""
-    )
-=======
 def SUBSTR(start: int, length: int, source=None) -> "Step[Any, str]":
     def _apply_substr(v):
         return op_substr(v, start, length)
@@ -100,11 +80,8 @@ def join_parts(*parts: Any) -> "Step[Dict[str, Any], str]":
 
 
 # ------------------------------------------------------------------
-# JsonLogic-style operator implementations (plain functions)
-# These mirror the style used in jsonlogic's `operations` dict and
-# are exposed so other code can call them directly if desired.
+# JsonLogic-style operator implementations
 # ------------------------------------------------------------------
-
 
 def op_capitalize(v: Any) -> Any:
     if v is None:
@@ -137,17 +114,10 @@ OPERATIONS = {
 # --------------------------------------------------
 # GST helpers
 # --------------------------------------------------
->>>>>>> Stashed changes
 
 def GST_DETAILS_ALL() -> "Step[Any, List[Dict[str, str]]]":
-    from src.step_engine import Step
-
     def _impl(records: Any) -> List[Dict[str, str]]:
-<<<<<<< Updated upstream
-        # normalise nested list from jsonpath
-=======
         # normalize nested list from jsonpath
->>>>>>> Stashed changes
         if records and isinstance(records[0], list):
             records = records[0]
 
@@ -172,9 +142,6 @@ def GST_DETAILS_ALL() -> "Step[Any, List[Dict[str, str]]]":
 
         return out
 
-<<<<<<< Updated upstream
-    return Step(_impl)
-=======
     return Step(_impl)
 
 
@@ -190,4 +157,3 @@ def JSONLOGIC(rule: Dict[str, Any]) -> Step[Dict[str, Any], Any]:
         return jsonLogic(rule, blob)
 
     return Step(_apply)
->>>>>>> Stashed changes
