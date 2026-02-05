@@ -34,25 +34,25 @@ class PassportNumber(str):
 
 
 class Expr:
-    def __or__(self, other: "Expr") -> "OpExpr":
-        if isinstance(other, OpExpr):
-            # If the other OpExpr has None as its first argument, replace it with self
-            if other.args and other.args[0] is None:
-                new_args = [self] + other.args[1:]
-                return OpExpr(other.op, new_args)
-            # Otherwise, it's a pipe operation
-            return OpExpr("pipe", [self, other])
-        return NotImplemented
+    """Base expression type.
+
+    The pipeline/operator-overload support (using `|`) was removed because
+    the codebase uses nested function-call style transforms. If you need
+    pipeline-style syntax again, reintroduce an explicit implementation
+    and add tests to cover it.
+    """
+    pass
 
 
 class PathExpr(Expr):
     def __init__(self, jsonpath: str):
         self.jsonpath = jsonpath
+        from jsonpath_ng import parse
+        # Cache compiled JSONPath to avoid reparsing on every call
+        self._compiled = parse(jsonpath)
 
     def __call__(self, data):
-        from jsonpath_ng import parse
-        compiled = parse(self.jsonpath)
-        matches = compiled.find(data)
+        matches = self._compiled.find(data)
         if not matches:
             return None
         if len(matches) == 1:
@@ -78,65 +78,9 @@ class OpExpr(Expr):
                 evaluated_args.append(arg)
         
         # Now execute the operation
-        return self._execute(evaluated_args)
+        return self._execute(evaluated_args, data)
     
-    def _execute(self, args):
-        """Execute the operation with evaluated arguments."""
-        import json
-        import pathlib
-        
-        if self.op == "path":
-            from jsonpath_ng import parse
-            jsonpath = args[0]
-            compiled = parse(jsonpath)
-            matches = compiled.find(args[1] if len(args) > 1 else {})
-            if not matches:
-                return None
-            if len(matches) == 1:
-                return matches[0].value
-            return [m.value for m in matches]
-        
-        elif self.op == "capitalize":
-            v = args[0]
-            if v is None:
-                return None
-            s = v if isinstance(v, str) else str(v)
-            return s.capitalize()
-        
-        elif self.op == "substr":
-            v = args[0]
-            start = args[1]
-            length = args[2]
-            if v is None:
-                return None
-            s = v if isinstance(v, str) else str(v)
-            return s[start:start + length]
-        
-        elif self.op == "join_parts":
-            return "".join(str(arg) for arg in args)
-        
-        elif self.op == "gst_details_all":
-            records = args[0]
-            _GST_MAP_PATH = pathlib.Path(__file__).parent / "gstin_state_codes_india.json"
-            GST_STATE_CODE_MAP = json.loads(_GST_MAP_PATH.read_text())
-            
-            if records and isinstance(records, list) and len(records) > 0 and isinstance(records[0], list):
-                records = records[0]
-            out = []
-            for rec in records if records else []:
-                if not isinstance(rec, dict):
-                    continue
-                gst = rec.get("gst_number")
-                if not isinstance(gst, str) or len(gst) < 12:
-                    continue
-                state_code = gst[:2]
-                pan = gst[2:12]
-                out.append({
-                    "gst_number": gst, 
-                    "pan_number": pan, 
-                    "state_name": GST_STATE_CODE_MAP.get(state_code, "")
-                })
-            return out
-        
-        else:
-            raise ValueError(f"Unknown operation: {self.op}")
+    def _execute(self, args, data=None):
+        """Delegate execution to shared functions in `function_pool`."""
+        from src.function_pool import execute
+        return execute(self.op, args, data)

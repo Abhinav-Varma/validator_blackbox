@@ -1,24 +1,12 @@
 """
 JSONLogic compiler and execution engine.
 """
-import json
-import pathlib
 from typing import Any, Dict, List, Union
 
 from jsonpath_ng import parse
 
 from src.custom_types import PathExpr, OpExpr
-
-
-# Load GST state codes
-_GST_MAP_PATH = pathlib.Path(__file__).parent / "gstin_state_codes_india.json"
-GST_STATE_CODE_MAP = json.loads(_GST_MAP_PATH.read_text())
-
-# Known JSONLogic operators
-KNOWN_OPERATORS = {
-    "capitalize", "substr", "join_parts", "gst_details_all", "path",
-    # Standard JSONLogic operators could be added here
-}
+from src.function_pool import KNOWN_OPERATORS, execute
 
 
 def jsonlogic_apply(logic: Any, data: Any) -> Any:
@@ -54,60 +42,8 @@ def jsonlogic_apply(logic: Any, data: Any) -> Any:
                 else:
                     evaluated_args = [jsonlogic_apply(args, data)]
                 
-                # Apply custom operators
-                if op == "capitalize":
-                    v = evaluated_args[0] if evaluated_args else None
-                    if v is None:
-                        return None
-                    s = v if isinstance(v, str) else str(v)
-                    return s.capitalize()
-                
-                elif op == "substr":
-                    v = evaluated_args[0] if len(evaluated_args) > 0 else None
-                    start = evaluated_args[1] if len(evaluated_args) > 1 else 0
-                    length = evaluated_args[2] if len(evaluated_args) > 2 else 0
-                    if v is None:
-                        return None
-                    s = v if isinstance(v, str) else str(v)
-                    return s[start:start + length]
-                
-                elif op == "join_parts":
-                    return "".join(str(arg) for arg in evaluated_args)
-                
-                elif op == "gst_details_all":
-                    records = evaluated_args[0] if evaluated_args else None
-                    
-                    # Handle nested list case
-                    if records and isinstance(records, list) and len(records) > 0 and isinstance(records[0], list):
-                        records = records[0]
-                    
-                    out = []
-                    for rec in records if records else []:
-                        if not isinstance(rec, dict):
-                            continue
-                        gst = rec.get("gst_number")
-                        if not isinstance(gst, str) or len(gst) < 12:
-                            continue
-                        state_code = gst[:2]
-                        pan = gst[2:12]
-                        out.append({
-                            "gst_number": gst,
-                            "pan_number": pan,
-                            "state_name": GST_STATE_CODE_MAP.get(state_code, "")
-                        })
-                    return out
-                
-                elif op == "path":
-                    # Path operation - resolve JSONPath
-                    jsonpath = evaluated_args[0] if evaluated_args else "$"
-                    target_data = evaluated_args[1] if len(evaluated_args) > 1 else data
-                    compiled = parse(jsonpath)
-                    matches = compiled.find(target_data)
-                    if not matches:
-                        return None
-                    if len(matches) == 1:
-                        return matches[0].value
-                    return [m.value for m in matches]
+                # Delegate operator execution to shared dispatcher
+                return execute(op, evaluated_args, data)
         
         # Not a known operation - treat as regular dict (but still apply recursively to values)
         return {k: jsonlogic_apply(v, data) for k, v in logic.items()}
