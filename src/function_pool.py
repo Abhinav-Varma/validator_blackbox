@@ -4,13 +4,11 @@ Add new helpers here; they will be auto-available in rules.py
 """
 
 from typing import List, Dict, Any
-from decimal import Decimal
 import json
 import pathlib
 
 from src.step_engine import Step
 from src.jsonlogic_engine import jsonLogic
-
 
 # --------------------------------------------------
 # Shared data
@@ -19,56 +17,22 @@ from src.jsonlogic_engine import jsonLogic
 _GST_MAP_PATH = pathlib.Path(__file__).with_name("gstin_state_codes_india.json")
 GST_STATE_CODE_MAP: Dict[str, str] = json.loads(_GST_MAP_PATH.read_text())
 
-
 # --------------------------------------------------
-# Internal helpers
-# --------------------------------------------------
-
-def _resolve_parts(blob: Dict[str, Any], parts: list) -> list[str]:
-    """Resolve Path objects inside a list of mixed literals / paths."""
-    from src.step_engine import Path
-
-    out: list[str] = []
-    for p in parts:
-        if isinstance(p, Path):
-            out.append(str(p(blob)))
-        else:
-            out.append(str(p))
-    return out
-
-
-# --------------------------------------------------
-# String / list transforms
+# String / list transforms (nested-style only)
 # --------------------------------------------------
 
-def CAPITALIZE(source=None) -> "Step[Any, str]":
+def CAPITALIZE(source) -> "Step[Any, str]":
     def _cap(v):
         return op_capitalize(v)
 
-    if source is None:
-        return Step(_cap)
-    if callable(source):
-        return Step(lambda blob: _cap(source(blob)))
-    return Step(lambda _: _cap(source))
+    return Step(lambda blob: _cap(source(blob)))
 
 
-def CONCAT(sep: str = " ") -> "Step[list, str]":
-    return Step(lambda pieces: sep.join(map(str, pieces)))
-
-
-def JOIN() -> "Step[list, str]":
-    return Step("".join)
-
-
-def SUBSTR(start: int, length: int, source=None) -> "Step[Any, str]":
+def SUBSTR(start: int, length: int, source) -> "Step[Any, str]":
     def _apply_substr(v):
         return op_substr(v, start, length)
 
-    if source is None:
-        return Step(_apply_substr)
-    if callable(source):
-        return Step(lambda blob: _apply_substr(source(blob)))
-    return Step(lambda _: _apply_substr(source))
+    return Step(lambda blob: _apply_substr(source(blob)))
 
 
 def join_parts(*parts: Any) -> "Step[Dict[str, Any], str]":
@@ -78,10 +42,9 @@ def join_parts(*parts: Any) -> "Step[Dict[str, Any], str]":
 
     return Step(_join)
 
-
-# ------------------------------------------------------------------
+# --------------------------------------------------
 # JsonLogic-style operator implementations
-# ------------------------------------------------------------------
+# --------------------------------------------------
 
 def op_capitalize(v: Any) -> Any:
     if v is None:
@@ -103,13 +66,13 @@ def op_join(*parts: Any) -> str:
     return "".join(str(p) for p in parts if p is not None)
 
 
-# Expose an OPERATIONS-like dict similar to jsonlogic
+# Optional: exposed operator table (JsonLogic-style)
+
 OPERATIONS = {
     "capitalize": op_capitalize,
     "substr": op_substr,
     "cat": op_join,
 }
-
 
 # --------------------------------------------------
 # GST helpers
@@ -143,7 +106,6 @@ def GST_DETAILS_ALL() -> "Step[Any, List[Dict[str, str]]]":
         return out
 
     return Step(_impl)
-
 
 # --------------------------------------------------
 # JsonLogic integration
