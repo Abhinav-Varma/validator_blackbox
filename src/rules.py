@@ -11,13 +11,13 @@ from src.custom_types import NonEmptyStr, PassportNumber
 
 
 class CustomerNameModel(TransformBaseModel):
-    """Model demonstrating pipeline and nested function-call style transforms"""
-    # Pipeline style: path | SUBSTR | CAPITALIZE
+    """Model demonstrating nested function-call style transforms"""
+    # Transform style: nested function-call (no pipeline operator)
     full_name: Annotated[
         str,
         StringConstraints(min_length=10)
     ] = Field(
-        description="Full name using pipeline style transforms",
+        description="Full name using nested function-call transforms",
         transform=join_parts(
             CAPITALIZE(SUBSTR(path("$..first_name"), 0, 10)),
             " ",

@@ -12,7 +12,7 @@ def main() -> None:
     with open("sample.json", "r") as f:
         data = json.load(f)
 
-    # CustomerNameModel - pipeline and nested function-call styles
+    # CustomerNameModel - nested function-call style transforms
     name_model = CustomerNameModel(**data)
     print("CustomerNameModel Output:")
     print(name_model.model_dump_json(indent=2))
