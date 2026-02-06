@@ -1,12 +1,13 @@
 # src/custom_basemodel.py
 from pydantic import Field as PydanticField, BaseModel, model_validator
 from typing import Any, Callable, Dict
-from src.step_engine import Step
+from src.expression_constructor import ExpressionConstructor
+
 
 def Field(
     *,
     default: Any = ...,
-    transform: Step[Dict[str, Any], Any] | None = None,
+    transform: Dict[str, Any] | None = None,
     **kwargs,
 ):
     return PydanticField(
@@ -19,7 +20,7 @@ def Field(
 
 class TransformBaseModel(BaseModel):
     """
-    BaseModel that applies field-level transforms BEFORE validation.
+    BaseModel that applies field-level transforms BEFORE validation using JSONLogic.
     """
 
     @model_validator(mode="before")
@@ -31,15 +32,17 @@ class TransformBaseModel(BaseModel):
         data = dict(input_data)
 
         for field_name, field_info in cls.model_fields.items():
-            # Always attempt to run a transform if one is defined.
-            # Transforms now take precedence over any input-provided value
-            # by replacing the field when the transform returns non-None.
+            # Attempt to run a transform if one is defined
             extra = field_info.json_schema_extra or {}
             transform = extra.get("transform")
             if transform is None:
                 continue
 
-            value = transform(input_data)
+            # Convert nested expression to JSONLogic rule
+            jsonlogic_rule = ExpressionConstructor.construct(transform)
+            
+            # Apply JSONLogic rule to extract and transform data
+            value = ExpressionConstructor.apply(jsonlogic_rule, input_data)
             if value is not None:
                 data[field_name] = value
 

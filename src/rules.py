@@ -1,38 +1,38 @@
 """
 All user-defined transformation models.
+Converted to nested JSONLogic format.
 """
 from typing import List, Dict, Literal
 from typing_extensions import Annotated
 from pydantic.types import StringConstraints
 
 from src.custom_basemodel import TransformBaseModel, Field
-from src.step_engine import path
-from src.function_pool import CAPITALIZE, SUBSTR, join_parts, GST_DETAILS_ALL
+from src.expression_constructor import JSONPATH, CAPITALIZE, SUBSTR, JOIN_PARTS, GST_DETAILS_ALL
 from src.custom_types import NonEmptyStr, PassportNumber
 
 
 class CustomerNameModel(TransformBaseModel):
-    """Model demonstrating pipeline and nested function-call style transforms"""
-    # Pipeline style: path | SUBSTR | CAPITALIZE
+    """Model demonstrating nested function-call style transforms"""
+    # Nested function-call style using JSONLogic operators
     full_name: Annotated[
         str,
         StringConstraints(min_length=10)
     ] = Field(
-        description="Full name using pipeline style transforms",
-        transform=join_parts(
-            path("$..first_name") | SUBSTR(0,10) | CAPITALIZE(),
+        description="Full name using nested JSONLogic style transforms",
+        transform=JOIN_PARTS(
+            CAPITALIZE(JSONPATH("$..first_name")),
             " ",
-            path("$..surname") | CAPITALIZE() | SUBSTR(0,7),
+            CAPITALIZE(JSONPATH("$..surname")),
         ),
     )
 
     # Nested function-call style: CAPITALIZE(SUBSTR(path))
     display_name: str = Field(
         description="Display name using nested function-call style",
-        transform=join_parts(
-            CAPITALIZE(SUBSTR(0, 10, path("$..first_name"))),
+        transform=JOIN_PARTS(
+            CAPITALIZE(SUBSTR(0, 10, JSONPATH("$..first_name"))),
             " ",
-            CAPITALIZE(SUBSTR(0, 7, path("$..surname"))),
+            CAPITALIZE(SUBSTR(0, 7, JSONPATH("$..surname"))),
         ),
     )
 
@@ -42,14 +42,14 @@ class TravelInfoModel(TransformBaseModel):
     # Complex nested path extraction
     travel_summary: str = Field(
         description="Human readable travel summary",
-        transform=join_parts(
-            path("$.visa_request_information.visa_request.from_country_full_name"),
+        transform=JOIN_PARTS(
+            JSONPATH("$.visa_request_information.visa_request.from_country_full_name"),
             " → ",
-            path("$.visa_request_information.visa_request.to_country_full_name"),
+            JSONPATH("$.visa_request_information.visa_request.to_country_full_name"),
             " (",
-            path("$.visa_request_information.visa_request.departure_date_formatted"),
+            JSONPATH("$.visa_request_information.visa_request.departure_date_formatted"),
             " to ",
-            path("$.visa_request_information.visa_request.arrival_date_formatted"),
+            JSONPATH("$.visa_request_information.visa_request.arrival_date_formatted"),
             ")",
         ),
     )
@@ -57,7 +57,7 @@ class TravelInfoModel(TransformBaseModel):
     # Default value demonstration
     country: str = Field(
         default="Unknown",
-        transform=path("$.country"),
+        transform=JSONPATH("$.country"),
     )
 
 
@@ -65,26 +65,26 @@ class CustomerProfileModel(TransformBaseModel):
     """Model demonstrating custom types and list processing"""
     # Custom type with validation (PassportNumber)
     passport_number: PassportNumber = Field(
-        transform=path("$..passport_number") | SUBSTR(0, 9),
+        transform=SUBSTR(0, 9, JSONPATH("$..passport_number")),
     )
 
     # Literal type validation
     gender: Literal["M", "F", "O"] = Field(
-        transform=path("$..gender"),
+        transform=JSONPATH("$..gender"),
     )
 
     # NonEmptyStr custom type
     customer_name: NonEmptyStr = Field(
         description="Customer name using NonEmptyStr type",
-        transform=join_parts(
-            path("$..first_name") | CAPITALIZE(),
+        transform=JOIN_PARTS(
+            CAPITALIZE(JSONPATH("$..first_name")),
             " ",
-            path("$..surname") | CAPITALIZE(),
+            CAPITALIZE(JSONPATH("$..surname")),
         ),
     )
 
     # GST list processing with default
     gst_outputs: List[Dict[str, str]] = Field(
         default=[],
-        transform=path("$.gst_records") | GST_DETAILS_ALL(),
+        transform=GST_DETAILS_ALL(JSONPATH("$.gst_records")),
     )
