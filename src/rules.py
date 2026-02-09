@@ -1,23 +1,24 @@
 """
 All user-defined transformation models.
-New models are added here; they are instantly usable in main.py.
 """
-from typing import List, Dict
+from typing import List, Dict, Literal
+from typing_extensions import Annotated
+from pydantic.types import StringConstraints
+
 from src.custom_basemodel import TransformBaseModel, Field
 from src.step_engine import path
-from src.function_pool import (  # whitelist only what you need
-    CAPITALIZE,
-    join_parts,
-    GST_DETAILS_ALL,
-    SUBSTR,
-)
+from src.function_pool import CAPITALIZE, SUBSTR, join_parts, GST_DETAILS_ALL
+from src.custom_types import NonEmptyStr, PassportNumber
 
-# ------------------------------------------------------------------
-# Models
-# ------------------------------------------------------------------
-class OutputModel(TransformBaseModel):
-    full_name: str = Field(
-        description="Full name of the customer",
+
+class CustomerNameModel(TransformBaseModel):
+    """Model demonstrating pipeline and nested function-call style transforms"""
+    # Pipeline style: path | SUBSTR | CAPITALIZE
+    full_name: Annotated[
+        str,
+        StringConstraints(min_length=10)
+    ] = Field(
+        description="Full name using pipeline style transforms",
         transform=join_parts(
             path("$..first_name") | SUBSTR(0,10) | CAPITALIZE(),
             " ",
@@ -25,7 +26,20 @@ class OutputModel(TransformBaseModel):
         ),
     )
 
-class TravelSummaryModel(TransformBaseModel):
+    # Nested function-call style: CAPITALIZE(SUBSTR(path))
+    display_name: str = Field(
+        description="Display name using nested function-call style",
+        transform=join_parts(
+            CAPITALIZE(SUBSTR(0, 10, path("$..first_name"))),
+            " ",
+            CAPITALIZE(SUBSTR(0, 7, path("$..surname"))),
+        ),
+    )
+
+
+class TravelInfoModel(TransformBaseModel):
+    """Model demonstrating complex path extraction and custom types"""
+    # Complex nested path extraction
     travel_summary: str = Field(
         description="Human readable travel summary",
         transform=join_parts(
@@ -40,8 +54,37 @@ class TravelSummaryModel(TransformBaseModel):
         ),
     )
 
-class GSTAllModel(TransformBaseModel):
+    # Default value demonstration
+    country: str = Field(
+        default="Unknown",
+        transform=path("$.country"),
+    )
+
+
+class CustomerProfileModel(TransformBaseModel):
+    """Model demonstrating custom types and list processing"""
+    # Custom type with validation (PassportNumber)
+    passport_number: PassportNumber = Field(
+        transform=path("$..passport_number") | SUBSTR(0, 9),
+    )
+
+    # Literal type validation
+    gender: Literal["M", "F", "O"] = Field(
+        transform=path("$..gender"),
+    )
+
+    # NonEmptyStr custom type
+    customer_name: NonEmptyStr = Field(
+        description="Customer name using NonEmptyStr type",
+        transform=join_parts(
+            path("$..first_name") | CAPITALIZE(),
+            " ",
+            path("$..surname") | CAPITALIZE(),
+        ),
+    )
+
+    # GST list processing with default
     gst_outputs: List[Dict[str, str]] = Field(
-        description="GST details for ALL GST numbers",
+        default=[],
         transform=path("$.gst_records") | GST_DETAILS_ALL(),
     )
