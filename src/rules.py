@@ -6,8 +6,11 @@ from typing import List, Dict, Literal
 from typing_extensions import Annotated
 from pydantic.types import StringConstraints
 
+# Import jsonlogic_operations to trigger auto-registration of operators
+import src.jsonlogic_operations
+
 from src.custom_basemodel import TransformBaseModel, Field
-from src.expression_constructor import JSONPATH, CAPITALIZE, SUBSTR, JOIN_PARTS, GST_DETAILS_ALL
+from src.jsonlogic_operations import JSONPATH, CAPITALIZE, SUBSTR, JOIN_PARTS, GST_DETAILS_ALL
 from src.custom_types import NonEmptyStr, PassportNumber
 
 
