@@ -45,18 +45,3 @@ class TransformBaseModel(BaseModel):
 
         return data
 
-    # dumping extras for security
-    @model_validator(mode="after")
-    def _strip_extras(self):
-        """
-        Permanently remove extra input data after validation.
-        This enforces output isolation.
-        """
-        if hasattr(self, "__pydantic_extra__"):
-            self.__pydantic_extra__.clear()
-        return self
-
-    model_config = {
-        "extra": "allow",
-        "arbitrary_types_allowed": True,
-    }
